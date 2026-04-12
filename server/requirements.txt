@@ -1,0 +1,11 @@
+Flask==3.0.0
+Flask-SQLAlchemy==3.1.1
+Flask-JWT-Extended==4.5.3
+Flask-CORS==4.0.0
+python-dotenv==1.0.0
+# psycopg2-binary==2.9.9  # PostgreSQL driver - not needed for SQLite dev
+PyJWT==2.12.1
+Werkzeug==3.0.1
+pandas==2.2.3
+numpy==2.2.4
+scikit-learn==1.6.1
