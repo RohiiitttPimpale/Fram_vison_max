@@ -1,6 +1,6 @@
 from flask import Flask, request, jsonify
 from flask_cors import CORS
-import pickle
+import joblib
 import pandas as pd
 import logging
 import os
@@ -13,21 +13,22 @@ logger = logging.getLogger(__name__)
 
 # Global model and encoders loaded once on startup
 MODEL = None
-ENCODERS = None
+LABEL_ENCODER_CROP = None
+LABEL_ENCODER_STATE = None
 FEATURE_COLUMNS = None
 
 def load_model():
     """Load model and encoders once at service startup"""
-    global MODEL, ENCODERS, FEATURE_COLUMNS
+    global MODEL, LABEL_ENCODER_CROP, LABEL_ENCODER_STATE, FEATURE_COLUMNS
     try:
-        model_path = os.environ.get('MODEL_PATH', '../server/model/yield_model.pkl')
+        model_path = os.environ.get('MODEL_PATH', '../server/model/yield_model.joblib')
         
         # Try multiple possible paths
         possible_paths = [
             model_path,
-            './server/model/yield_model.pkl',
-            '../server/model/yield_model.pkl',
-            '/app/model/yield_model.pkl'
+            './server/model/yield_model.joblib',
+            '../server/model/yield_model.joblib',
+            '/app/model/yield_model.joblib'
         ]
         
         model_file = None
@@ -40,16 +41,33 @@ def load_model():
             logger.error(f"Model file not found. Tried: {possible_paths}")
             return False
         
-        with open(model_file, 'rb') as f:
-            data = pickle.load(f)
-            MODEL = data['model']
-            ENCODERS = data.get('encoders', {})
-            FEATURE_COLUMNS = data.get('feature_columns', [
+        data = joblib.load(model_file)
+        logger.info(f"Model file keys: {list(data.keys())}")
+        
+        MODEL = data.get('model')
+        LABEL_ENCODER_CROP = data.get('label_encoder_crop')
+        LABEL_ENCODER_STATE = data.get('label_encoder_state')
+        FEATURE_COLUMNS = data.get('feature_columns', [
                 'area', 'fertilizer', 'pesticide', 'avg_temp_c',
                 'total_rainfall_mm', 'avg_humidity_percent',
                 'N', 'P', 'K', 'pH', 'crop', 'state'
             ])
+        
+        if MODEL is None:
+            logger.error("✗ Model key not found in model file")
+            return False
+        
+        if LABEL_ENCODER_CROP is None:
+            logger.error("✗ label_encoder_crop not found in model file")
+            return False
+            
+        if LABEL_ENCODER_STATE is None:
+            logger.error("✗ label_encoder_state not found in model file")
+            return False
+            
         logger.info(f"✓ Model loaded successfully from {model_file}")
+        logger.info(f"✓ Encoders available: crop and state")
+        logger.info(f"✓ Feature columns: {FEATURE_COLUMNS}")
         return True
     except Exception as e:
         logger.error(f"✗ Failed to load model: {e}")
@@ -98,11 +116,25 @@ def predict():
                 return jsonify({"error": f"Missing field: {field}"}), 400
         
         # Encode categorical features
-        crop_encoded = ENCODERS['crop'].transform([data['crop']])[0]
-        state_encoded = ENCODERS['state'].transform([data['state']])[0]
+        try:
+            if LABEL_ENCODER_CROP is None:
+                logger.error("✗ 'crop' encoder not loaded")
+                return jsonify({"error": "'crop' encoder not available"}), 500
+            
+            if LABEL_ENCODER_STATE is None:
+                logger.error("✗ 'state' encoder not loaded")
+                return jsonify({"error": "'state' encoder not available"}), 500
+            
+            crop_encoded = LABEL_ENCODER_CROP.transform([data['crop']])[0]
+            state_encoded = LABEL_ENCODER_STATE.transform([data['state']])[0]
+        except Exception as e:
+            logger.error(f"✗ Encoding error: {e}", exc_info=True)
+            return jsonify({"error": f"Encoding failed: {str(e)}"}), 500
         
-        # Build feature array in model's expected order
+        # Build feature array in model's expected order: crop, state, area, fertilizer, ...
         features = pd.DataFrame([[
+            crop_encoded,
+            state_encoded,
             data['area'],
             data['fertilizer'],
             data['pesticide'],
@@ -112,15 +144,13 @@ def predict():
             data['N'],
             data['P'],
             data['K'],
-            data['pH'],
-            crop_encoded,
-            state_encoded
+            data['pH']
         ]], columns=FEATURE_COLUMNS)
         
         # Run prediction
         prediction = MODEL.predict(features)[0]
         
-        logger.info(f"Prediction: {data['crop']} in {data['state']} → {prediction:.2f}")
+        logger.info(f"✓ Prediction: {data['crop']} in {data['state']} → {prediction:.2f}")
         
         return jsonify({
             "predicted_yield": round(float(prediction), 2),

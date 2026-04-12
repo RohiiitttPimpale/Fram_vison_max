@@ -11,7 +11,7 @@ Backend API (Flask) :5000
     ↓
 Model Service (Flask) :5001
     ↓
-ML Model (yield_model.pkl)
+ML Model (yield_model.joblib)
 ```
 
 ## Services
@@ -39,6 +39,7 @@ ML Model (yield_model.pkl)
 - **Loads model ONCE at startup**: Efficient memory usage
 - **Dependencies**: Flask, pandas, numpy, scikit-learn
 - **Run**: `python model-service/service.py` or via docker-compose
+- **Deployment**: Can also run on Hugging Face Spaces as documented in [model-service/README.md](model-service/README.md)
 
 ## Quick Local Setup
 
@@ -108,7 +109,7 @@ npm run dev
 ## Database & Files
 
 - **SQLite Database**: `server/instance/soil_smart_pilot.db`
-- **Model File**: `server/model/yield_model.pkl`
+- **Model File**: `server/model/yield_model.joblib`
 - **Frontend Build**: `dist/`
 
 ## Environment Configuration
@@ -123,7 +124,7 @@ MODEL_SERVICE_URL=http://localhost:5001
 
 ### Model Service
 ```
-MODEL_PATH=/app/model/yield_model.pkl
+MODEL_PATH=/app/model/yield_model.joblib
 ```
 
 ## Key Benefits of This Architecture
@@ -158,7 +159,7 @@ MODEL_PATH=/app/model/yield_model.pkl
 ### Model Service fails to start
 ```
 Error: Model file not found
-Solution: Ensure server/model/yield_model.pkl exists
+Solution: Ensure server/model/yield_model.joblib exists
 ```
 
 ### Backend cannot reach Model Service

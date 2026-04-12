@@ -9,13 +9,13 @@ services:
     ports:
       - "5001:5001"
     environment:
-      - MODEL_PATH=/app/model/yield_model.pkl
+      - MODEL_PATH=/app/model/yield_model.joblib
     volumes:
       - ./server/model:/app/model:ro
     networks:
       - soil-smart
     healthcheck:
-      test: ["CMD", "python", "-c", "import requests; requests.get('http://localhost:5001/health')"]
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:5001/health')"]
       interval: 10s
       timeout: 5s
       retries: 3
@@ -29,7 +29,7 @@ services:
     ports:
       - "5000:5000"
     environment:
-      - FLASK_ENV=development
+      - FLASK_ENV=production
       - DATABASE_URL=sqlite:///soil_smart_pilot.db
       - JWT_SECRET_KEY=dev-jwt-secret
       - MODEL_SERVICE_URL=http://model-service:5001
@@ -41,7 +41,7 @@ services:
     volumes:
       - ./server:/app
     healthcheck:
-      test: ["CMD", "python", "-c", "import requests; requests.get('http://localhost:5000/health')"]
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:5000/api/health')"]
       interval: 10s
       timeout: 5s
       retries: 3

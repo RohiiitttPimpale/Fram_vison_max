@@ -1,13 +1,14 @@
 import { useState, useEffect } from "react";
 import { motion } from "framer-motion";
-import { CROPS, getRecommendations, Recommendation, CropConfig } from "@/lib/agri-data";
+import { CROPS, getRecommendations, Recommendation, CropConfig, WeatherData, fetchRealWeatherForState } from "@/lib/agri-data";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { CROP_NAME_KEYS, CATEGORY_KEYS } from "@/lib/translations";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Label } from "@/components/ui/label";
-import { Droplets, FlaskConical, Bug, Coins } from "lucide-react";
+import { Droplets, FlaskConical, Bug, Coins, RefreshCw } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
-import { useLiveWeather } from "@/hooks/use-live-weather";
+import { Button } from "@/components/ui/button";
+import { toast } from "sonner";
 
 const iconMap = {
   droplets: Droplets,
@@ -28,7 +29,62 @@ const Recommendations = () => {
   const defaultCrop = CROPS.find(c => c.name === user?.preferredCrop) || CROPS[0];
   const [crop, setCrop] = useState<CropConfig>(defaultCrop);
   const [recs, setRecs] = useState<Recommendation[]>([]);
-  const { weather } = useLiveWeather();
+  const [weather, setWeather] = useState<WeatherData | null>(null);
+  const [weatherLoading, setWeatherLoading] = useState(false);
+  const [weatherError, setWeatherError] = useState<string | null>(null);
+  const [weatherState, setWeatherState] = useState("");
+
+  const fetchWeather = async (showToast: boolean = false) => {
+    const stateName = (user?.location || "").trim();
+    if (!stateName) {
+      setWeather(null);
+      setWeatherError("Please set your location in profile to load weather.");
+      return;
+    }
+
+    try {
+      setWeatherLoading(true);
+      setWeatherError(null);
+
+      let live: WeatherData;
+      try {
+        live = await fetchRealWeatherForState(stateName);
+      } catch {
+        const parts = stateName.split(",").map(part => part.trim()).filter(Boolean);
+        const fallbackState = parts.length > 1 ? parts[parts.length - 1] : stateName;
+        live = await fetchRealWeatherForState(fallbackState);
+      }
+
+      setWeather(live);
+      setWeatherState(stateName);
+      if (showToast) {
+        toast.success(`Live weather updated for ${stateName}`);
+      }
+    } catch (err) {
+      const message = err instanceof Error ? err.message : "Failed to fetch live weather";
+      setWeather(null);
+      setWeatherError(message);
+      if (showToast) {
+        toast.error(message);
+      }
+    } finally {
+      setWeatherLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    const stateName = (user?.location || "").trim();
+    if (!stateName) {
+      setWeather(null);
+      setWeatherState("");
+      setWeatherError("Please set your location in profile to load weather.");
+      return;
+    }
+
+    if (weatherState !== stateName) {
+      void fetchWeather(false);
+    }
+  }, [user?.location, weatherState]);
 
   useEffect(() => {
     if (!weather) return;
@@ -57,6 +113,22 @@ const Recommendations = () => {
             {CROPS.map(c => <SelectItem key={c.name} value={c.name}>{t(CROP_NAME_KEYS[c.name])}</SelectItem>)}
           </SelectContent>
         </Select>
+      </div>
+
+      <div className="mb-6 flex items-center gap-3 flex-wrap">
+        <Button variant="outline" size="sm" onClick={() => void fetchWeather(true)} disabled={weatherLoading}>
+          <RefreshCw size={14} className="mr-1" />
+          {weatherLoading ? "Fetching weather..." : "Refresh Weather"}
+        </Button>
+        {weather && (
+          <p className="text-sm text-muted-foreground">
+            {weatherState ? `Weather for ${weatherState}: ` : "Weather: "}
+            {weather.temperature}deg C, {weather.humidity}% humidity, {weather.rainfall}mm rainfall
+          </p>
+        )}
+        {!weather && weatherError && (
+          <p className="text-sm text-destructive">{weatherError}</p>
+        )}
       </div>
 
       <div className="grid md:grid-cols-2 gap-4">

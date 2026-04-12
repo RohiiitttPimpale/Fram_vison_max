@@ -10,7 +10,7 @@ import sys
 
 import pandas as pd
 
-MODEL_PATH = os.path.join(os.path.dirname(__file__), "model", "yield_model.pkl")
+MODEL_PATH = os.path.join(os.path.dirname(__file__), "model", "yield_model.joblib")
 FEATURE_COLUMNS = [
     "crop",
     "state",
