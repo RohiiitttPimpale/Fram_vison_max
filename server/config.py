@@ -12,7 +12,7 @@ class Config:
     JWT_REFRESH_TOKEN_EXPIRES = timedelta(seconds=int(os.environ.get("JWT_REFRESH_TOKEN_EXPIRES", 2592000)))
     
     # CORS
-    FRONTEND_URL = os.environ.get("FRONTEND_URL", "http://localhost:4174")
+    FRONTEND_URL = os.environ.get("FRONTEND_URL", "http://localhost:4174,http://localhost:5173")
 
 
 class DevelopmentConfig(Config):

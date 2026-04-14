@@ -1,5 +1,6 @@
 """Flask application factory."""
 import os
+import re
 from flask import Flask
 from flask_cors import CORS
 from flask_jwt_extended import JWTManager
@@ -16,6 +17,32 @@ from routes.tasks import tasks_bp
 load_dotenv()
 
 
+def get_cors_origins():
+    """Build CORS origins from env, supporting CSV and wildcard hosts."""
+    raw_origins = os.environ.get("FRONTEND_URLS") or os.environ.get("FRONTEND_URL", "http://localhost:4174")
+    raw_origins = raw_origins.strip()
+
+    if raw_origins == "*":
+        return "*"
+
+    origins = []
+    for item in raw_origins.split(","):
+        origin = item.strip().rstrip("/")
+        if not origin:
+            continue
+
+        if "*" in origin:
+            pattern = "^" + re.escape(origin).replace("\\*", ".*") + "$"
+            origins.append(re.compile(pattern))
+        else:
+            origins.append(origin)
+
+    if not origins:
+        return "http://localhost:4174"
+
+    return origins
+
+
 def create_app(config_name=None):
     """Create and configure Flask application."""
     if config_name is None:
@@ -29,7 +56,7 @@ def create_app(config_name=None):
     # Initialize extensions
     db.init_app(app)
     jwt = JWTManager(app)
-    CORS(app, resources={r"/api/*": {"origins": app.config["FRONTEND_URL"]}})
+    CORS(app, resources={r"/api/*": {"origins": get_cors_origins()}})
     
     # Register blueprints
     app.register_blueprint(auth_bp)
