@@ -33,6 +33,13 @@ cp .env.example .env
 
 5. Configure environment variables in `.env` if needed (defaults work for local development)
 
+Recommended variables:
+- `DATABASE_URL` for PostgreSQL in production
+- `MODEL_SERVICE_URL` for yield prediction service
+- `DISEASE_MODEL_URL` for crop disease model endpoint (example: `https://rohit-pimpale-crop-disease-api.hf.space/predict`)
+- `JWT_SECRET_KEY` strong secret for auth tokens
+- `SECRET_KEY` strong Flask app secret
+
 ### Running the Server
 
 **Option 1: Run Flask directly**

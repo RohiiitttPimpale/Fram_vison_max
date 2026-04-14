@@ -13,6 +13,8 @@ services:
         sync: false
       - key: MODEL_SERVICE_URL
         sync: false
+      - key: DISEASE_MODEL_URL
+        sync: false
       - key: SECRET_KEY
         sync: false
       - key: JWT_SECRET_KEY
