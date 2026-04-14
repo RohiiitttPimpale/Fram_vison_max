@@ -81,6 +81,20 @@ def health():
     return jsonify({"status": "ok", "message": "Model service healthy"})
 
 
+@app.route("/", methods=["GET"])
+def home():
+    return jsonify(
+        {
+            "status": "ok",
+            "message": "Soil Smart model service is running",
+            "endpoints": {
+                "health": "/health",
+                "inference": "/api/inference",
+            },
+        }
+    )
+
+
 @app.route("/api/inference", methods=["POST"])
 def predict():
     if MODEL is None:
