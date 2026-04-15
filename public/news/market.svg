@@ -1,0 +1,19 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 640 400" role="img" aria-label="Agricultural market trend">
+  <rect width="640" height="400" fill="#e8f5e9"/>
+  <rect x="60" y="60" width="520" height="280" rx="16" fill="#ffffff"/>
+  <g stroke="#c8e6c9" stroke-width="2">
+    <path d="M100 110 h440"/>
+    <path d="M100 160 h440"/>
+    <path d="M100 210 h440"/>
+    <path d="M100 260 h440"/>
+    <path d="M100 310 h440"/>
+  </g>
+  <g fill="#a5d6a7">
+    <rect x="130" y="230" width="45" height="80"/>
+    <rect x="210" y="200" width="45" height="110"/>
+    <rect x="290" y="180" width="45" height="130"/>
+    <rect x="370" y="140" width="45" height="170"/>
+  </g>
+  <path d="M130 260 C200 220 250 230 320 170 C370 125 430 130 500 95" stroke="#2e7d32" stroke-width="8" fill="none"/>
+  <path d="M500 95 l-20 8 l4-22 z" fill="#2e7d32"/>
+</svg>

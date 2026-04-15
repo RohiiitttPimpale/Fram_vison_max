@@ -1,0 +1,24 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 640 400" role="img" aria-label="Monsoon over farmland">
+  <defs>
+    <linearGradient id="sky" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#9ad0f5"/>
+      <stop offset="1" stop-color="#dff3ff"/>
+    </linearGradient>
+    <linearGradient id="field" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#7cb342"/>
+      <stop offset="1" stop-color="#558b2f"/>
+    </linearGradient>
+  </defs>
+  <rect width="640" height="400" fill="url(#sky)"/>
+  <circle cx="530" cy="70" r="38" fill="#ffe082"/>
+  <ellipse cx="160" cy="95" rx="70" ry="30" fill="#ffffff" opacity="0.85"/>
+  <ellipse cx="235" cy="105" rx="65" ry="28" fill="#ffffff" opacity="0.9"/>
+  <path d="M0 240 C120 190 220 280 320 230 C430 180 520 265 640 220 L640 400 L0 400 Z" fill="url(#field)"/>
+  <path d="M0 280 C110 250 210 320 320 285 C430 250 520 315 640 280" fill="#8bc34a" stroke="#8bc34a" stroke-width="40"/>
+  <g fill="#4fc3f7" opacity="0.7">
+    <path d="M140 125 l-8 24" stroke="#4fc3f7" stroke-width="4" stroke-linecap="round"/>
+    <path d="M180 140 l-8 24" stroke="#4fc3f7" stroke-width="4" stroke-linecap="round"/>
+    <path d="M225 130 l-8 24" stroke="#4fc3f7" stroke-width="4" stroke-linecap="round"/>
+    <path d="M265 145 l-8 24" stroke="#4fc3f7" stroke-width="4" stroke-linecap="round"/>
+  </g>
+</svg>

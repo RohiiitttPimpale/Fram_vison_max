@@ -3,7 +3,7 @@ import { NavLink, useNavigate } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
 import { useLanguage } from "@/contexts/LanguageContext";
 import LanguageSelector from "@/components/LanguageSelector";
-import { LayoutDashboard, TrendingUp, Bug, Lightbulb, User, LogOut, Sprout, CalendarDays } from "lucide-react";
+import { LayoutDashboard, TrendingUp, Bug, Lightbulb, User, LogOut, Sprout, CalendarDays, Newspaper } from "lucide-react";
 
 const links = [
   { to: "/", labelKey: "nav_dashboard", icon: LayoutDashboard },
@@ -11,6 +11,7 @@ const links = [
   { to: "/disease", labelKey: "nav_disease", icon: Bug },
   { to: "/recommendations", labelKey: "nav_recommendations", icon: Lightbulb },
   { to: "/planner", labelKey: "nav_planner", icon: CalendarDays },
+  { to: "/news", labelKey: "nav_news", icon: Newspaper },
   { to: "/profile", labelKey: "nav_profile", icon: User },
 ];
 

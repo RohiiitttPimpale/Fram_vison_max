@@ -15,6 +15,7 @@ const DiseaseDetection = lazy(() => import("@/pages/DiseaseDetection"));
 const Recommendations = lazy(() => import("@/pages/Recommendations"));
 const Profile = lazy(() => import("@/pages/Profile"));
 const CropPlanner = lazy(() => import("@/pages/CropPlanner"));
+const News = lazy(() => import("@/pages/News"));
 const NotFound = lazy(() => import("@/pages/NotFound"));
 
 const queryClient = new QueryClient();
@@ -48,6 +49,7 @@ const App = () => (
               <Route path="/disease" element={<ProtectedRoute><DiseaseDetection /></ProtectedRoute>} />
               <Route path="/recommendations" element={<ProtectedRoute><Recommendations /></ProtectedRoute>} />
               <Route path="/planner" element={<ProtectedRoute><CropPlanner /></ProtectedRoute>} />
+              <Route path="/news" element={<ProtectedRoute><News /></ProtectedRoute>} />
               <Route path="/profile" element={<ProtectedRoute><Profile /></ProtectedRoute>} />
               <Route path="*" element={<NotFound />} />
             </Routes>

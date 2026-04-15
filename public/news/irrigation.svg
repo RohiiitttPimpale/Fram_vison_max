@@ -1,0 +1,18 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 640 400" role="img" aria-label="Irrigation in crop rows">
+  <rect width="640" height="400" fill="#dcedc8"/>
+  <rect y="0" width="640" height="130" fill="#b3e5fc"/>
+  <circle cx="520" cy="60" r="35" fill="#fff59d"/>
+  <path d="M30 240 C120 210 220 260 310 230 C390 205 500 250 610 225" stroke="#7cb342" stroke-width="24" fill="none"/>
+  <path d="M30 280 C120 250 220 300 310 270 C390 245 500 290 610 265" stroke="#689f38" stroke-width="24" fill="none"/>
+  <path d="M70 150 h500 v20 h-500 z" fill="#607d8b"/>
+  <circle cx="130" cy="170" r="14" fill="#455a64"/>
+  <circle cx="240" cy="170" r="14" fill="#455a64"/>
+  <circle cx="350" cy="170" r="14" fill="#455a64"/>
+  <circle cx="460" cy="170" r="14" fill="#455a64"/>
+  <g stroke="#29b6f6" stroke-width="4" stroke-linecap="round" opacity="0.8">
+    <path d="M130 170 l-18 24"/>
+    <path d="M240 170 l-18 24"/>
+    <path d="M350 170 l-18 24"/>
+    <path d="M460 170 l-18 24"/>
+  </g>
+</svg>

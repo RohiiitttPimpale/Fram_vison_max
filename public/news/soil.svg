@@ -1,0 +1,14 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 640 400" role="img" aria-label="Soil testing sample">
+  <rect width="640" height="400" fill="#fff8e1"/>
+  <rect y="0" width="640" height="120" fill="#dcedc8"/>
+  <ellipse cx="320" cy="275" rx="240" ry="95" fill="#8d6e63"/>
+  <ellipse cx="320" cy="290" rx="200" ry="70" fill="#6d4c41"/>
+  <g fill="#aed581">
+    <path d="M250 210 c10-35 25-45 45-60 c7 25 -2 54 -24 70 z"/>
+    <path d="M390 205 c-8-34 -22-46 -42-62 c-6 24 3 55 24 69 z"/>
+    <rect x="312" y="188" width="16" height="80" rx="8" fill="#5d4037"/>
+  </g>
+  <rect x="470" y="140" width="100" height="170" rx="16" fill="#eceff1" stroke="#90a4ae" stroke-width="4"/>
+  <rect x="485" y="165" width="70" height="80" rx="8" fill="#cfd8dc"/>
+  <circle cx="520" cy="270" r="12" fill="#90a4ae"/>
+</svg>

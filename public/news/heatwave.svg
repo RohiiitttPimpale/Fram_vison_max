@@ -1,0 +1,32 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 640 400" role="img" aria-label="Heatwave farm advisory">
+  <defs>
+    <linearGradient id="hotSky" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#ffcc80"/>
+      <stop offset="1" stop-color="#ffe0b2"/>
+    </linearGradient>
+  </defs>
+  <rect width="640" height="400" fill="url(#hotSky)"/>
+  <circle cx="520" cy="85" r="50" fill="#ffb300"/>
+  <g stroke="#ff9800" stroke-width="6" stroke-linecap="round">
+    <path d="M520 18 v-20"/>
+    <path d="M520 172 v20"/>
+    <path d="M453 85 h-20"/>
+    <path d="M587 85 h20"/>
+    <path d="M474 39 l-14 -14"/>
+    <path d="M566 131 l14 14"/>
+    <path d="M474 131 l-14 14"/>
+    <path d="M566 39 l14 -14"/>
+  </g>
+  <path d="M0 265 C110 220 220 300 325 260 C430 220 525 290 640 250 L640 400 L0 400 Z" fill="#8bc34a"/>
+  <g fill="#5d4037" opacity="0.45">
+    <ellipse cx="130" cy="300" rx="70" ry="16"/>
+    <ellipse cx="310" cy="310" rx="90" ry="18"/>
+    <ellipse cx="500" cy="302" rx="75" ry="16"/>
+  </g>
+  <g stroke="#29b6f6" stroke-width="4" stroke-linecap="round">
+    <path d="M85 230 l0 58"/>
+    <path d="M220 220 l0 62"/>
+    <path d="M355 225 l0 60"/>
+    <path d="M490 220 l0 63"/>
+  </g>
+</svg>

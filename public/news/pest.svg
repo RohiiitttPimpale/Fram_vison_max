@@ -1,0 +1,26 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 640 400" role="img" aria-label="Pest monitoring in crops">
+  <rect width="640" height="400" fill="#f1f8e9"/>
+  <rect y="0" width="640" height="120" fill="#c5e1a5"/>
+  <path d="M0 260 C90 230 180 285 275 255 C360 230 460 280 640 245 L640 400 L0 400 Z" fill="#7cb342"/>
+  <g stroke="#558b2f" stroke-width="6" stroke-linecap="round">
+    <path d="M120 310 l0-80"/>
+    <path d="M220 320 l0-90"/>
+    <path d="M320 315 l0-85"/>
+    <path d="M420 318 l0-88"/>
+    <path d="M520 312 l0-82"/>
+  </g>
+  <g fill="#33691e">
+    <ellipse cx="120" cy="225" rx="24" ry="14"/>
+    <ellipse cx="220" cy="220" rx="24" ry="14"/>
+    <ellipse cx="320" cy="222" rx="24" ry="14"/>
+    <ellipse cx="420" cy="218" rx="24" ry="14"/>
+    <ellipse cx="520" cy="221" rx="24" ry="14"/>
+  </g>
+  <g stroke="#5d4037" stroke-width="4" fill="#8d6e63">
+    <ellipse cx="320" cy="140" rx="28" ry="18"/>
+    <path d="M292 140 h-22"/>
+    <path d="M348 140 h22"/>
+    <path d="M305 124 l-12 -16"/>
+    <path d="M335 124 l12 -16"/>
+  </g>
+</svg>

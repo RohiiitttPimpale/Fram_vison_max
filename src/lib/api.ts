@@ -234,6 +234,48 @@ class ApiClient {
   async predictYieldModel(data: ModelPredictionRequest): Promise<ModelPredictionResponse> {
     return this.request("/prediction/yield", "POST", data);
   }
+
+  // ===== CONTENT ENDPOINTS =====
+
+  private buildQuery(params: Record<string, string | number | undefined>): string {
+    const search = new URLSearchParams();
+    Object.entries(params).forEach(([key, value]) => {
+      if (value !== undefined && value !== "") {
+        search.set(key, String(value));
+      }
+    });
+    const query = search.toString();
+    return query ? `?${query}` : "";
+  }
+
+  async getNewsHeadlines(limit: number = 3): Promise<HeadlineResponse> {
+    const query = this.buildQuery({ limit });
+    return this.request(`/content/headlines${query}`, "GET");
+  }
+
+  async getNewsFeed(params: NewsFeedParams = {}): Promise<PaginatedResponse<NewsItem>> {
+    const query = this.buildQuery({
+      page: params.page ?? 1,
+      limit: params.limit ?? 6,
+      category: params.category,
+      region: params.region,
+    });
+    return this.request(`/content/news${query}`, "GET");
+  }
+
+  async getOffersFeed(params: OffersFeedParams = {}): Promise<PaginatedResponse<OfferItem>> {
+    const query = this.buildQuery({
+      page: params.page ?? 1,
+      limit: params.limit ?? 6,
+      crop: params.crop,
+      region: params.region,
+    });
+    return this.request(`/content/offers${query}`, "GET");
+  }
+
+  async trackContentClick(payload: ContentClickTelemetry): Promise<{ ok: boolean }> {
+    return this.request("/content/telemetry/click", "POST", payload);
+  }
 }
 
 export interface UserProfile {
@@ -291,6 +333,65 @@ export interface ModelPredictionResponse {
   unit: string;
   model_crop: string;
   model_state: string;
+}
+
+export interface NewsItem {
+  id: string;
+  title: string;
+  summary: string;
+  image_url?: string;
+  url: string;
+  source: string;
+  category: string;
+  region: string;
+  published_at: string;
+}
+
+export interface OfferItem {
+  id: string;
+  title: string;
+  description: string;
+  provider: string;
+  url: string;
+  discount_percent: number;
+  crop: string;
+  region: string;
+  valid_until: string;
+  published_at: string;
+}
+
+export interface PaginatedResponse<T> {
+  items: T[];
+  page: number;
+  limit: number;
+  total: number;
+  has_more: boolean;
+}
+
+export interface HeadlineResponse {
+  items: NewsItem[];
+  total: number;
+}
+
+export interface NewsFeedParams {
+  page?: number;
+  limit?: number;
+  category?: string;
+  region?: string;
+}
+
+export interface OffersFeedParams {
+  page?: number;
+  limit?: number;
+  crop?: string;
+  region?: string;
+}
+
+export interface ContentClickTelemetry {
+  item_id: string;
+  item_type: "news" | "offer";
+  source: string;
+  surface: "dashboard" | "news";
 }
 
 export const apiClient = new ApiClient(API_BASE_URL);
