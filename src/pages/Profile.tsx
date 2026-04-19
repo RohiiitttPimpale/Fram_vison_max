@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useAuth } from "@/contexts/AuthContext";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { extractLocation } from "@/lib/location";
@@ -16,8 +16,23 @@ const Profile = () => {
     name: user?.name || "",
     email: user?.email || "",
     location: user?.location || "",
-    farmSize: user?.farmSize || "",
+    farm_size: user?.farm_size || "",
   });
+
+  useEffect(() => {
+    if (form.location) return;
+
+    const prefillLocation = async () => {
+      try {
+        const location = await extractLocation();
+        setForm((prev) => ({ ...prev, location }));
+      } catch {
+        // Keep manual input path when geolocation is unavailable.
+      }
+    };
+
+    void prefillLocation();
+  }, [form.location]);
 
   const handleExtractLocation = async () => {
     try {
@@ -33,10 +48,17 @@ const Profile = () => {
     }
   };
 
-  const handleSave = (e: React.FormEvent) => {
+  const handleSave = async (e: React.FormEvent) => {
     e.preventDefault();
-    updateProfile(form);
-    toast.success(t("profile_updated"));
+    const success = await updateProfile({
+      name: form.name,
+      location: form.location,
+      farm_size: form.farm_size,
+    });
+
+    if (success) {
+      toast.success(t("profile_updated"));
+    }
   };
 
   return (
@@ -77,7 +99,7 @@ const Profile = () => {
               </div>
               <div className="space-y-2">
                 <Label>{t("farm_size")}</Label>
-                <Input value={form.farmSize} onChange={e => setForm(f => ({ ...f, farmSize: e.target.value }))} />
+                <Input value={form.farm_size} onChange={e => setForm(f => ({ ...f, farm_size: e.target.value }))} />
               </div>
             </div>
             <Button type="submit" className="w-full agri-btn-press">{t("save_changes")}</Button>

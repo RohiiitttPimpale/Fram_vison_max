@@ -15,6 +15,8 @@ import HarvestingStage from "@/components/planner/HarvestingStage";
 import SellingStage from "@/components/planner/SellingStage";
 import MyCropsHub, { CropEntry } from "@/components/planner/MyCropsHub";
 import { useLiveWeather } from "@/hooks/use-live-weather";
+import { usePredictiveDefaults } from "@/hooks/use-predictive-defaults";
+import { Skeleton } from "@/components/ui/skeleton";
 
 type PlannerView = "hub" | "detail" | "newCrop";
 type PlannerPhase = "soil" | "select" | "setup" | "dashboard" | "finalStage";
@@ -63,6 +65,7 @@ const CropPlanner = () => {
   const { t } = useLanguage();
   const { user, isAuthenticated } = useAuth();
   const { weather } = useLiveWeather();
+  const { today } = usePredictiveDefaults();
 
   // State for crops (from backend)
   const [allCrops, setAllCrops] = useState<CropEntry[]>([]);
@@ -75,7 +78,7 @@ const CropPlanner = () => {
   const [soilData, setSoilData] = useState<SoilData | null>(null);
   const [soilComplete, setSoilComplete] = useState(false);
   const [selectedCrop, setSelectedCrop] = useState("");
-  const [startDate, setStartDate] = useState("");
+  const [startDate, setStartDate] = useState(today);
   const [schedule, setSchedule] = useState<DailyTask[] | null>(null);
   const [completedTasks, setCompletedTasks] = useState<Set<string>>(new Set());
   const [isHarvestCompleted, setIsHarvestCompleted] = useState(false);
@@ -98,6 +101,7 @@ const CropPlanner = () => {
         if (entries.length === 0) {
           setView("newCrop");
           setActiveCropId(null);
+          setStartDate(today);
         } else {
           setView("hub");
           setActiveCropId(entries[entries.length - 1].id);
@@ -111,7 +115,7 @@ const CropPlanner = () => {
     };
 
     loadCrops();
-  }, [isAuthenticated, user]);
+  }, [isAuthenticated, today, user]);
 
   // Active crop data
   const activeCrop = useMemo(() => {
@@ -195,11 +199,11 @@ const CropPlanner = () => {
     setSoilData(null);
     setSoilComplete(false);
     setSelectedCrop("");
-    setStartDate("");
+    setStartDate(today);
     setSchedule(null);
     setCompletedTasks(new Set());
     setView("newCrop");
-  }, []);
+  }, [today]);
 
   const handleDeleteCropById = useCallback(async (cropId: string) => {
     const crop = allCrops.find(c => c.id === cropId);
@@ -221,7 +225,7 @@ const CropPlanner = () => {
           setSoilData(null);
           setSoilComplete(false);
           setSelectedCrop("");
-          setStartDate("");
+          setStartDate(today);
           setSchedule(null);
           setCompletedTasks(new Set());
           setView("newCrop");
@@ -230,7 +234,7 @@ const CropPlanner = () => {
     } catch (err) {
       console.error("Error deleting crop:", err);
     }
-  }, [activeCropId, allCrops, loadCropIntoState]);
+  }, [activeCropId, allCrops, loadCropIntoState, today]);
 
   const handleBackToHub = useCallback(() => {
     setView("hub");
@@ -288,7 +292,7 @@ const CropPlanner = () => {
       setSoilData(null);
       setSoilComplete(false);
       setSelectedCrop("");
-      setStartDate("");
+      setStartDate(today);
       setSchedule(null);
       setCompletedTasks(new Set());
       setView("newCrop");
@@ -343,8 +347,13 @@ const CropPlanner = () => {
 
   if (cropsLoading) {
     return (
-      <div className="flex items-center justify-center py-12">
-        <p className="text-muted-foreground">{t("loading") || "Loading..."}</p>
+      <div className="space-y-4 py-2">
+        <Skeleton className="h-9 w-56" />
+        <div className="grid gap-4 md:grid-cols-2">
+          <Skeleton className="h-40 rounded-2xl" />
+          <Skeleton className="h-40 rounded-2xl" />
+        </div>
+        <Skeleton className="h-56 rounded-2xl" />
       </div>
     );
   }

@@ -1,13 +1,19 @@
 import { useLanguage, LANGUAGES, type Language } from "@/contexts/LanguageContext";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Globe } from "lucide-react";
+import { cn } from "@/lib/utils";
 
-const LanguageSelector = () => {
+interface LanguageSelectorProps {
+  compact?: boolean;
+  className?: string;
+}
+
+const LanguageSelector = ({ compact = false, className }: LanguageSelectorProps) => {
   const { language, setLanguage, t } = useLanguage();
 
   return (
-    <div className="flex items-center gap-2">
-      <Globe size={16} className="text-muted-foreground" />
+    <div className={cn("flex items-center gap-2", className)}>
+      {!compact && <Globe size={16} className="text-muted-foreground" />}
       <Select
         value={language}
         onValueChange={(v) => {
@@ -16,7 +22,7 @@ const LanguageSelector = () => {
           }
         }}
       >
-        <SelectTrigger className="w-[140px] h-8 text-xs">
+        <SelectTrigger className={cn("h-8 text-xs", compact ? "w-[110px]" : "w-[140px]")}>
           <SelectValue />
         </SelectTrigger>
         <SelectContent>

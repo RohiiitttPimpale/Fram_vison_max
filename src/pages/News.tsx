@@ -4,6 +4,7 @@ import { motion } from "framer-motion";
 import { Newspaper, Tag, ExternalLink, AlertCircle, MapPin } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Skeleton } from "@/components/ui/skeleton";
 import { useAuth } from "@/contexts/AuthContext";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { useContentTelemetry, useInfiniteNewsFeed, useInfiniteOffersFeed } from "@/hooks/use-news-content";
@@ -26,7 +27,11 @@ const extractStateFromLocation = (location?: string) => {
     return location.trim();
   }
 
-  return parts.length > 1 ? parts[parts.length - 1] : parts[0];
+  const cleaned = parts.filter((part) => part.toLowerCase() !== "india");
+  if (cleaned.length === 0) {
+    return parts[0];
+  }
+  return cleaned.length > 1 ? cleaned[cleaned.length - 1] : cleaned[0];
 };
 
 const News = () => {
@@ -62,6 +67,7 @@ const News = () => {
   const offersQuery = useInfiniteOffersFeed(effectiveState);
   const allOffersQuery = useInfiniteOffersFeed();
   const telemetry = useContentTelemetry();
+  const isFilteringByState = !!effectiveState;
 
   const newsItems = newsQuery.data?.pages.flatMap((page) => page.items) ?? [];
   const allNewsItems = allNewsQuery.data?.pages.flatMap((page) => page.items) ?? [];
@@ -70,9 +76,29 @@ const News = () => {
 
   const needsNewsFallback = newsQuery.isError || (!newsQuery.isLoading && newsItems.length === 0);
   const needsOffersFallback = offersQuery.isError || (!offersQuery.isLoading && offerItems.length === 0);
-  const usingFallback = (needsNewsFallback && allNewsItems.length === 0) || (needsOffersFallback && allOfferItems.length === 0);
-  const displayNews = newsItems.length > 0 ? newsItems : allNewsItems.length > 0 ? allNewsItems : mockNews;
-  const displayOffers = offerItems.length > 0 ? offerItems : allOfferItems.length > 0 ? allOfferItems : mockOffers;
+  const isInitialNewsLoading = newsQuery.isLoading && newsItems.length === 0;
+  const isInitialOffersLoading = offersQuery.isLoading && offerItems.length === 0;
+  const usingFallback =
+    (needsNewsFallback && (isFilteringByState || allNewsItems.length === 0)) ||
+    (needsOffersFallback && (isFilteringByState || allOfferItems.length === 0));
+  const displayNews = isInitialNewsLoading
+    ? []
+    : newsItems.length > 0
+    ? newsItems
+    : isFilteringByState
+      ? []
+      : allNewsItems.length > 0
+        ? allNewsItems
+        : mockNews;
+  const displayOffers = isInitialOffersLoading
+    ? []
+    : offerItems.length > 0
+    ? offerItems
+    : isFilteringByState
+      ? []
+      : allOfferItems.length > 0
+        ? allOfferItems
+        : mockOffers;
 
   const trackClick = (itemId: string, itemType: "news" | "offer", source: string) => {
     telemetry.mutate({
@@ -134,6 +160,21 @@ const News = () => {
         </div>
 
         <div className="grid md:grid-cols-2 gap-4">
+          {isInitialNewsLoading &&
+            Array.from({ length: 4 }).map((_, index) => (
+              <div key={`news-skeleton-${index}`} className="agri-card block">
+                <div className="flex gap-3">
+                  <Skeleton className="h-24 w-24 rounded-lg md:h-28 md:w-28" />
+                  <div className="flex-1">
+                    <Skeleton className="mb-2 h-3 w-24" />
+                    <Skeleton className="mb-2 h-4 w-full" />
+                    <Skeleton className="mb-2 h-4 w-4/5" />
+                    <Skeleton className="h-3 w-full" />
+                  </div>
+                </div>
+              </div>
+            ))}
+
           {displayNews.map((item, index) => (
             <motion.a
               href={item.url || "#"}
@@ -157,7 +198,7 @@ const News = () => {
                     />
                   ) : (
                     <div className="w-full h-full flex items-center justify-center text-xs text-muted-foreground">
-                      No Image
+                      {t("news_no_image")}
                     </div>
                   )}
                 </div>
@@ -200,6 +241,15 @@ const News = () => {
         </div>
 
         <div className="grid md:grid-cols-2 gap-4">
+          {isInitialOffersLoading &&
+            Array.from({ length: 4 }).map((_, index) => (
+              <div key={`offers-skeleton-${index}`} className="agri-card block">
+                <Skeleton className="mb-2 h-3 w-36" />
+                <Skeleton className="mb-2 h-4 w-full" />
+                <Skeleton className="h-3 w-4/5" />
+              </div>
+            ))}
+
           {displayOffers.map((offer, index) => (
             <motion.a
               href={offer.url || "#"}
@@ -222,7 +272,7 @@ const News = () => {
                 </div>
                 {offer.discount_percent > 0 && (
                   <span className="text-xs px-2 py-1 rounded-full bg-primary/10 text-primary font-medium">
-                    {offer.discount_percent}% OFF
+                    {offer.discount_percent}% {t("news_discount_off")}
                   </span>
                 )}
               </div>

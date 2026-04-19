@@ -39,12 +39,21 @@ export function simulateWeather(): WeatherData {
   };
 }
 
-function weatherCodeToCondition(code: number): string {
-  if (code === 0) return "Sunny";
-  if ([1, 2].includes(code)) return "Partly Cloudy";
-  if (code === 3) return "Cloudy";
+function weatherCodeToCondition(code: number, cloudCover?: number): string {
   if ([51, 53, 55, 56, 57, 61, 63, 80].includes(code)) return "Light Rain";
   if ([65, 66, 67, 81, 82, 95, 96, 99].includes(code)) return "Rainy";
+
+  if (code === 0) return "Sunny";
+
+  // Use cloud cover when available to avoid overly broad cloudy labels.
+  if (typeof cloudCover === "number") {
+    if (cloudCover <= 25) return "Sunny";
+    if (cloudCover <= 65) return "Partly Cloudy";
+    return "Cloudy";
+  }
+
+  if ([1, 2].includes(code)) return "Partly Cloudy";
+  if (code === 3) return "Cloudy";
   return "Cloudy";
 }
 
@@ -91,7 +100,7 @@ async function fetchWeatherByCoordinates(latitude: number, longitude: number): P
   const url = new URL("https://api.open-meteo.com/v1/forecast");
   url.searchParams.set("latitude", String(latitude));
   url.searchParams.set("longitude", String(longitude));
-  url.searchParams.set("current", "temperature_2m,relative_humidity_2m,wind_speed_10m,weather_code");
+  url.searchParams.set("current", "temperature_2m,relative_humidity_2m,wind_speed_10m,weather_code,cloud_cover");
   url.searchParams.set("daily", "precipitation_sum");
   url.searchParams.set("timezone", "auto");
 
@@ -113,7 +122,10 @@ async function fetchWeatherByCoordinates(latitude: number, longitude: number): P
     humidity: Math.round(Number(current.relative_humidity_2m) || 0),
     rainfall: Math.round(Number(dailyRainfall) || 0),
     windSpeed: Math.round(Number(current.wind_speed_10m) || 0),
-    condition: weatherCodeToCondition(Number(current.weather_code) || 3),
+    condition: weatherCodeToCondition(
+      Number(current.weather_code) || 3,
+      typeof current.cloud_cover === "number" ? Number(current.cloud_cover) : undefined,
+    ),
   };
 }
 
@@ -138,14 +150,16 @@ export async function fetchRealWeather(): Promise<WeatherData> {
 }
 
 export async function fetchRealWeatherForState(stateName: string): Promise<WeatherData> {
-  const normalizedState = normalizeStateName(stateName);
+  const cleanedState = stateName.trim().replace(/,?\s*india\s*$/i, "");
+  const normalizedState = normalizeStateName(cleanedState);
   const mapped = STATE_COORDINATES[normalizedState];
   if (mapped) {
     return fetchWeatherByCoordinates(mapped.lat, mapped.lon);
   }
 
   const geocodeUrl = new URL("https://geocoding-api.open-meteo.com/v1/search");
-  geocodeUrl.searchParams.set("name", `${stateName}, India`);
+  const geocodeQuery = /\bindia\b/i.test(stateName) ? stateName : `${stateName}, India`;
+  geocodeUrl.searchParams.set("name", geocodeQuery);
   geocodeUrl.searchParams.set("countryCode", "IN");
   geocodeUrl.searchParams.set("count", "1");
   geocodeUrl.searchParams.set("language", "en");

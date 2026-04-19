@@ -57,6 +57,18 @@ export const translations: TranslationMap = {
     en: "News", hi: "समाचार", mr: "बातम्या", ta: "செய்திகள்", te: "వార్తలు",
     kn: "ಸುದ್ದಿ", gu: "સમાચાર", pa: "ਖਬਰਾਂ", bn: "সংবাদ", ml: "വാർത്തകൾ", or: "ସମାଚାର",
   },
+  nav_marketplace: {
+    en: "Marketplace", hi: "मार्केटप्लेस", mr: "मार्केटप्लेस", ta: "மார்க்கெட்ப்ளேஸ்", te: "మార్కెట్‌ప్లేస్",
+    kn: "ಮಾರ್ಕೆಟ್‌ಪ್ಲೇಸ್", gu: "માર્કેટપ્લેસ", pa: "ਮਾਰਕੀਟਪਲੇਸ", bn: "মার্কেটপ্লেস", ml: "മാർക്കറ്റ്‌പ്ലേസ്", or: "ମାର୍କେଟପ୍ଲେସ",
+  },
+  nav_my_listings: {
+    en: "My Listings", hi: "मेरी लिस्टिंग", mr: "माझ्या लिस्टिंग", ta: "என் பட்டியல்கள்", te: "నా లిస్టింగ్‌లు",
+    kn: "ನನ್ನ ಪಟ್ಟಿಗಳು", gu: "મારી લિસ્ટિંગ્સ", pa: "ਮੇਰੀਆਂ ਲਿਸਟਿੰਗਾਂ", bn: "আমার লিস্টিং", ml: "എന്റെ ലിസ്റ്റിംഗുകൾ", or: "ମୋ ଲିଷ୍ଟିଂ",
+  },
+  nav_marketplace_moderation: {
+    en: "Moderation", hi: "मॉडरेशन", mr: "मॉडरेशन", ta: "மோடரேஷன்", te: "మోడరేషన్",
+    kn: "ಮೋಡರೇಶನ್", gu: "મોડરેશન", pa: "ਮੋਡਰੇਸ਼ਨ", bn: "মডারেশন", ml: "മോഡറേഷൻ", or: "ମୋଡରେସନ",
+  },
   nav_profile: {
     en: "Profile", hi: "प्रोफ़ाइल", mr: "प्रोफाइल", ta: "சுயவிவரம்", te: "ప్రొఫైల్",
     kn: "ಪ್ರೊಫೈಲ್", gu: "પ્રોફાઇલ", pa: "ਪ੍ਰੋਫਾਈਲ", bn: "প্রোফাইল", ml: "പ്രൊഫൈൽ", or: "ପ୍ରୋଫାଇଲ",
@@ -246,6 +258,314 @@ export const translations: TranslationMap = {
   offers_empty: {
     en: "No active offers right now.", hi: "अभी कोई सक्रिय ऑफ़र नहीं है।", mr: "सध्या सक्रिय ऑफर नाहीत.", ta: "தற்போது சலுகைகள் இல்லை.", te: "ప్రస్తుతం ఆఫర్లు లేవు.",
     kn: "ಈಗ ಯಾವುದೇ ಸಕ್ರಿಯ ಆಫರ್ ಇಲ್ಲ.", gu: "હાલમાં સક્રિય ઓફર નથી.", pa: "ਇਸ ਵੇਲੇ ਕੋਈ ਚੱਲਦਾ ਆਫਰ ਨਹੀਂ।", bn: "এখন কোনো সক্রিয় অফার নেই।", ml: "ഇപ്പോൾ സജീവ ഓഫറുകളില്ല.", or: "ଏବେ କୌଣସି ସକ୍ରିୟ ଅଫର ନାହିଁ।",
+  },
+  news_no_image: {
+    en: "No image", hi: "No image", mr: "No image", ta: "No image", te: "No image",
+    kn: "No image", gu: "No image", pa: "No image", bn: "No image", ml: "No image", or: "No image",
+  },
+  news_discount_off: {
+    en: "OFF", hi: "OFF", mr: "OFF", ta: "OFF", te: "OFF",
+    kn: "OFF", gu: "OFF", pa: "OFF", bn: "OFF", ml: "OFF", or: "OFF",
+  },
+
+  // Marketplace (buy/sell friendly)
+  market_buy_sell_title: {
+    en: "Buy & Sell Marketplace", hi: "Buy & Sell Marketplace", mr: "Buy & Sell Marketplace", ta: "Buy & Sell Marketplace", te: "Buy & Sell Marketplace",
+    kn: "Buy & Sell Marketplace", gu: "Buy & Sell Marketplace", pa: "Buy & Sell Marketplace", bn: "Buy & Sell Marketplace", ml: "Buy & Sell Marketplace", or: "Buy & Sell Marketplace",
+  },
+  market_buy_sell_subtitle: {
+    en: "Buy crops/seeds or post your items for sale.", hi: "Buy crops/seeds or post your items for sale.", mr: "Buy crops/seeds or post your items for sale.", ta: "Buy crops/seeds or post your items for sale.", te: "Buy crops/seeds or post your items for sale.",
+    kn: "Buy crops/seeds or post your items for sale.", gu: "Buy crops/seeds or post your items for sale.", pa: "Buy crops/seeds or post your items for sale.", bn: "Buy crops/seeds or post your items for sale.", ml: "Buy crops/seeds or post your items for sale.", or: "Buy crops/seeds or post your items for sale.",
+  },
+  market_buy_section_title: {
+    en: "Buy From Farmers", hi: "Buy From Farmers", mr: "Buy From Farmers", ta: "Buy From Farmers", te: "Buy From Farmers",
+    kn: "Buy From Farmers", gu: "Buy From Farmers", pa: "Buy From Farmers", bn: "Buy From Farmers", ml: "Buy From Farmers", or: "Buy From Farmers",
+  },
+  market_search_placeholder: {
+    en: "Search crop or seed", hi: "Search crop or seed", mr: "Search crop or seed", ta: "Search crop or seed", te: "Search crop or seed",
+    kn: "Search crop or seed", gu: "Search crop or seed", pa: "Search crop or seed", bn: "Search crop or seed", ml: "Search crop or seed", or: "Search crop or seed",
+  },
+  market_kind_label: {
+    en: "Type", hi: "Type", mr: "Type", ta: "Type", te: "Type",
+    kn: "Type", gu: "Type", pa: "Type", bn: "Type", ml: "Type", or: "Type",
+  },
+  market_kind_all: {
+    en: "All", hi: "All", mr: "All", ta: "All", te: "All",
+    kn: "All", gu: "All", pa: "All", bn: "All", ml: "All", or: "All",
+  },
+  market_kind_crop: {
+    en: "Crop", hi: "Crop", mr: "Crop", ta: "Crop", te: "Crop",
+    kn: "Crop", gu: "Crop", pa: "Crop", bn: "Crop", ml: "Crop", or: "Crop",
+  },
+  market_kind_seed: {
+    en: "Seed", hi: "Seed", mr: "Seed", ta: "Seed", te: "Seed",
+    kn: "Seed", gu: "Seed", pa: "Seed", bn: "Seed", ml: "Seed", or: "Seed",
+  },
+  market_location_label: {
+    en: "Location", hi: "Location", mr: "Location", ta: "Location", te: "Location",
+    kn: "Location", gu: "Location", pa: "Location", bn: "Location", ml: "Location", or: "Location",
+  },
+  market_location_placeholder: {
+    en: "City, State", hi: "City, State", mr: "City, State", ta: "City, State", te: "City, State",
+    kn: "City, State", gu: "City, State", pa: "City, State", bn: "City, State", ml: "City, State", or: "City, State",
+  },
+  market_no_items: {
+    en: "No items available right now.", hi: "No items available right now.", mr: "No items available right now.", ta: "No items available right now.", te: "No items available right now.",
+    kn: "No items available right now.", gu: "No items available right now.", pa: "No items available right now.", bn: "No items available right now.", ml: "No items available right now.", or: "No items available right now.",
+  },
+  market_location_not_set: {
+    en: "Location not set", hi: "Location not set", mr: "Location not set", ta: "Location not set", te: "Location not set",
+    kn: "Location not set", gu: "Location not set", pa: "Location not set", bn: "Location not set", ml: "Location not set", or: "Location not set",
+  },
+  market_per: {
+    en: "per", hi: "per", mr: "per", ta: "per", te: "per",
+    kn: "per", gu: "per", pa: "per", bn: "per", ml: "per", or: "per",
+  },
+  market_buy_message_placeholder: {
+    en: "Write your buy request message", hi: "Write your buy request message", mr: "Write your buy request message", ta: "Write your buy request message", te: "Write your buy request message",
+    kn: "Write your buy request message", gu: "Write your buy request message", pa: "Write your buy request message", bn: "Write your buy request message", ml: "Write your buy request message", or: "Write your buy request message",
+  },
+  market_send_buy_request: {
+    en: "Send Buy Request", hi: "Send Buy Request", mr: "Send Buy Request", ta: "Send Buy Request", te: "Send Buy Request",
+    kn: "Send Buy Request", gu: "Send Buy Request", pa: "Send Buy Request", bn: "Send Buy Request", ml: "Send Buy Request", or: "Send Buy Request",
+  },
+  market_buy_default_message: {
+    en: "I want to buy this. Please share details.", hi: "I want to buy this. Please share details.", mr: "I want to buy this. Please share details.", ta: "I want to buy this. Please share details.", te: "I want to buy this. Please share details.",
+    kn: "I want to buy this. Please share details.", gu: "I want to buy this. Please share details.", pa: "I want to buy this. Please share details.", bn: "I want to buy this. Please share details.", ml: "I want to buy this. Please share details.", or: "I want to buy this. Please share details.",
+  },
+  market_page_summary: {
+    en: "Page {page} of {totalPages} · {totalItems} total item(s)", hi: "Page {page} of {totalPages} · {totalItems} total item(s)", mr: "Page {page} of {totalPages} · {totalItems} total item(s)", ta: "Page {page} of {totalPages} · {totalItems} total item(s)", te: "Page {page} of {totalPages} · {totalItems} total item(s)",
+    kn: "Page {page} of {totalPages} · {totalItems} total item(s)", gu: "Page {page} of {totalPages} · {totalItems} total item(s)", pa: "Page {page} of {totalPages} · {totalItems} total item(s)", bn: "Page {page} of {totalPages} · {totalItems} total item(s)", ml: "Page {page} of {totalPages} · {totalItems} total item(s)", or: "Page {page} of {totalPages} · {totalItems} total item(s)",
+  },
+  market_previous: {
+    en: "Previous", hi: "Previous", mr: "Previous", ta: "Previous", te: "Previous",
+    kn: "Previous", gu: "Previous", pa: "Previous", bn: "Previous", ml: "Previous", or: "Previous",
+  },
+  market_next: {
+    en: "Next", hi: "Next", mr: "Next", ta: "Next", te: "Next",
+    kn: "Next", gu: "Next", pa: "Next", bn: "Next", ml: "Next", or: "Next",
+  },
+  market_sell_section_title: {
+    en: "Sell Your Crop or Seed", hi: "Sell Your Crop or Seed", mr: "Sell Your Crop or Seed", ta: "Sell Your Crop or Seed", te: "Sell Your Crop or Seed",
+    kn: "Sell Your Crop or Seed", gu: "Sell Your Crop or Seed", pa: "Sell Your Crop or Seed", bn: "Sell Your Crop or Seed", ml: "Sell Your Crop or Seed", or: "Sell Your Crop or Seed",
+  },
+  market_title_label: {
+    en: "Title", hi: "Title", mr: "Title", ta: "Title", te: "Title",
+    kn: "Title", gu: "Title", pa: "Title", bn: "Title", ml: "Title", or: "Title",
+  },
+  market_crop_name_label: {
+    en: "Crop/Seed Name", hi: "Crop/Seed Name", mr: "Crop/Seed Name", ta: "Crop/Seed Name", te: "Crop/Seed Name",
+    kn: "Crop/Seed Name", gu: "Crop/Seed Name", pa: "Crop/Seed Name", bn: "Crop/Seed Name", ml: "Crop/Seed Name", or: "Crop/Seed Name",
+  },
+  market_title_placeholder: {
+    en: "e.g. Wheat seeds premium quality", hi: "e.g. Wheat seeds premium quality", mr: "e.g. Wheat seeds premium quality", ta: "e.g. Wheat seeds premium quality", te: "e.g. Wheat seeds premium quality",
+    kn: "e.g. Wheat seeds premium quality", gu: "e.g. Wheat seeds premium quality", pa: "e.g. Wheat seeds premium quality", bn: "e.g. Wheat seeds premium quality", ml: "e.g. Wheat seeds premium quality", or: "e.g. Wheat seeds premium quality",
+  },
+  market_crop_name_placeholder: {
+    en: "e.g. Wheat grain, Tomato, Hybrid Paddy seed", hi: "e.g. Wheat grain, Tomato, Hybrid Paddy seed", mr: "e.g. Wheat grain, Tomato, Hybrid Paddy seed", ta: "e.g. Wheat grain, Tomato, Hybrid Paddy seed", te: "e.g. Wheat grain, Tomato, Hybrid Paddy seed",
+    kn: "e.g. Wheat grain, Tomato, Hybrid Paddy seed", gu: "e.g. Wheat grain, Tomato, Hybrid Paddy seed", pa: "e.g. Wheat grain, Tomato, Hybrid Paddy seed", bn: "e.g. Wheat grain, Tomato, Hybrid Paddy seed", ml: "e.g. Wheat grain, Tomato, Hybrid Paddy seed", or: "e.g. Wheat grain, Tomato, Hybrid Paddy seed",
+  },
+  market_quantity_label: {
+    en: "Quantity", hi: "Quantity", mr: "Quantity", ta: "Quantity", te: "Quantity",
+    kn: "Quantity", gu: "Quantity", pa: "Quantity", bn: "Quantity", ml: "Quantity", or: "Quantity",
+  },
+  market_unit_label: {
+    en: "Unit", hi: "Unit", mr: "Unit", ta: "Unit", te: "Unit",
+    kn: "Unit", gu: "Unit", pa: "Unit", bn: "Unit", ml: "Unit", or: "Unit",
+  },
+  market_unit_placeholder: {
+    en: "kg", hi: "kg", mr: "kg", ta: "kg", te: "kg",
+    kn: "kg", gu: "kg", pa: "kg", bn: "kg", ml: "kg", or: "kg",
+  },
+  market_price_per_unit_label: {
+    en: "Price per Unit", hi: "Price per Unit", mr: "Price per Unit", ta: "Price per Unit", te: "Price per Unit",
+    kn: "Price per Unit", gu: "Price per Unit", pa: "Price per Unit", bn: "Price per Unit", ml: "Price per Unit", or: "Price per Unit",
+  },
+  market_description_label: {
+    en: "Description", hi: "Description", mr: "Description", ta: "Description", te: "Description",
+    kn: "Description", gu: "Description", pa: "Description", bn: "Description", ml: "Description", or: "Description",
+  },
+  market_description_placeholder: {
+    en: "Optional details", hi: "Optional details", mr: "Optional details", ta: "Optional details", te: "Optional details",
+    kn: "Optional details", gu: "Optional details", pa: "Optional details", bn: "Optional details", ml: "Optional details", or: "Optional details",
+  },
+  market_images_label: {
+    en: "Sale images (up to 5)", hi: "Sale images (up to 5)", mr: "Sale images (up to 5)", ta: "Sale images (up to 5)", te: "Sale images (up to 5)",
+    kn: "Sale images (up to 5)", gu: "Sale images (up to 5)", pa: "Sale images (up to 5)", bn: "Sale images (up to 5)", ml: "Sale images (up to 5)", or: "Sale images (up to 5)",
+  },
+  market_images_selected: {
+    en: "{count} image(s) selected", hi: "{count} image(s) selected", mr: "{count} image(s) selected", ta: "{count} image(s) selected", te: "{count} image(s) selected",
+    kn: "{count} image(s) selected", gu: "{count} image(s) selected", pa: "{count} image(s) selected", bn: "{count} image(s) selected", ml: "{count} image(s) selected", or: "{count} image(s) selected",
+  },
+  market_policy_accept: {
+    en: "I confirm this sale post follows marketplace policy and terms.", hi: "I confirm this sale post follows marketplace policy and terms.", mr: "I confirm this sale post follows marketplace policy and terms.", ta: "I confirm this sale post follows marketplace policy and terms.", te: "I confirm this sale post follows marketplace policy and terms.",
+    kn: "I confirm this sale post follows marketplace policy and terms.", gu: "I confirm this sale post follows marketplace policy and terms.", pa: "I confirm this sale post follows marketplace policy and terms.", bn: "I confirm this sale post follows marketplace policy and terms.", ml: "I confirm this sale post follows marketplace policy and terms.", or: "I confirm this sale post follows marketplace policy and terms.",
+  },
+  market_policy_review_prefix: {
+    en: "Review", hi: "Review", mr: "Review", ta: "Review", te: "Review",
+    kn: "Review", gu: "Review", pa: "Review", bn: "Review", ml: "Review", or: "Review",
+  },
+  market_policy_and: {
+    en: "and", hi: "and", mr: "and", ta: "and", te: "and",
+    kn: "and", gu: "and", pa: "and", bn: "and", ml: "and", or: "and",
+  },
+  market_policy_review_suffix: {
+    en: "before posting your sale.", hi: "before posting your sale.", mr: "before posting your sale.", ta: "before posting your sale.", te: "before posting your sale.",
+    kn: "before posting your sale.", gu: "before posting your sale.", pa: "before posting your sale.", bn: "before posting your sale.", ml: "before posting your sale.", or: "before posting your sale.",
+  },
+  market_policy_link: {
+    en: "Marketplace Policy", hi: "Marketplace Policy", mr: "Marketplace Policy", ta: "Marketplace Policy", te: "Marketplace Policy",
+    kn: "Marketplace Policy", gu: "Marketplace Policy", pa: "Marketplace Policy", bn: "Marketplace Policy", ml: "Marketplace Policy", or: "Marketplace Policy",
+  },
+  market_terms_link: {
+    en: "Terms", hi: "Terms", mr: "Terms", ta: "Terms", te: "Terms",
+    kn: "Terms", gu: "Terms", pa: "Terms", bn: "Terms", ml: "Terms", or: "Terms",
+  },
+  market_publishing: {
+    en: "Publishing...", hi: "Publishing...", mr: "Publishing...", ta: "Publishing...", te: "Publishing...",
+    kn: "Publishing...", gu: "Publishing...", pa: "Publishing...", bn: "Publishing...", ml: "Publishing...", or: "Publishing...",
+  },
+  market_publish_for_sale: {
+    en: "Publish For Sale", hi: "Publish For Sale", mr: "Publish For Sale", ta: "Publish For Sale", te: "Publish For Sale",
+    kn: "Publish For Sale", gu: "Publish For Sale", pa: "Publish For Sale", bn: "Publish For Sale", ml: "Publish For Sale", or: "Publish For Sale",
+  },
+  market_listing_images: {
+    en: "Listing images", hi: "Listing images", mr: "Listing images", ta: "Listing images", te: "Listing images",
+    kn: "Listing images", gu: "Listing images", pa: "Listing images", bn: "Listing images", ml: "Listing images", or: "Listing images",
+  },
+  marketplace_tab_buy: {
+    en: "Buy", hi: "Buy", mr: "Buy", ta: "Buy", te: "Buy",
+    kn: "Buy", gu: "Buy", pa: "Buy", bn: "Buy", ml: "Buy", or: "Buy",
+  },
+  marketplace_tab_sell: {
+    en: "My Selling", hi: "My Selling", mr: "My Selling", ta: "My Selling", te: "My Selling",
+    kn: "My Selling", gu: "My Selling", pa: "My Selling", bn: "My Selling", ml: "My Selling", or: "My Selling",
+  },
+  marketplace_tab_trading: {
+    en: "My Trading", hi: "My Trading", mr: "My Trading", ta: "My Trading", te: "My Trading",
+    kn: "My Trading", gu: "My Trading", pa: "My Trading", bn: "My Trading", ml: "My Trading", or: "My Trading",
+  },
+  marketplace_open_sell_form: {
+    en: "Open Selling Form", hi: "Open Selling Form", mr: "Open Selling Form", ta: "Open Selling Form", te: "Open Selling Form",
+    kn: "Open Selling Form", gu: "Open Selling Form", pa: "Open Selling Form", bn: "Open Selling Form", ml: "Open Selling Form", or: "Open Selling Form",
+  },
+  marketplace_trading_subtitle: {
+    en: "Track your selling and buying requests in one place.", hi: "Track your selling and buying requests in one place.", mr: "Track your selling and buying requests in one place.", ta: "Track your selling and buying requests in one place.", te: "Track your selling and buying requests in one place.",
+    kn: "Track your selling and buying requests in one place.", gu: "Track your selling and buying requests in one place.", pa: "Track your selling and buying requests in one place.", bn: "Track your selling and buying requests in one place.", ml: "Track your selling and buying requests in one place.", or: "Track your selling and buying requests in one place.",
+  },
+  marketplace_my_selling: {
+    en: "My Selling", hi: "My Selling", mr: "My Selling", ta: "My Selling", te: "My Selling",
+    kn: "My Selling", gu: "My Selling", pa: "My Selling", bn: "My Selling", ml: "My Selling", or: "My Selling",
+  },
+  marketplace_my_buying: {
+    en: "My Buying", hi: "My Buying", mr: "My Buying", ta: "My Buying", te: "My Buying",
+    kn: "My Buying", gu: "My Buying", pa: "My Buying", bn: "My Buying", ml: "My Buying", or: "My Buying",
+  },
+  marketplace_selling_requests_title: {
+    en: "Requests On My Listings", hi: "Requests On My Listings", mr: "Requests On My Listings", ta: "Requests On My Listings", te: "Requests On My Listings",
+    kn: "Requests On My Listings", gu: "Requests On My Listings", pa: "Requests On My Listings", bn: "Requests On My Listings", ml: "Requests On My Listings", or: "Requests On My Listings",
+  },
+  marketplace_buy_requests_title: {
+    en: "Requests I Sent", hi: "Requests I Sent", mr: "Requests I Sent", ta: "Requests I Sent", te: "Requests I Sent",
+    kn: "Requests I Sent", gu: "Requests I Sent", pa: "Requests I Sent", bn: "Requests I Sent", ml: "Requests I Sent", or: "Requests I Sent",
+  },
+  marketplace_no_sell_requests: {
+    en: "No buyer requests on your listings yet.", hi: "No buyer requests on your listings yet.", mr: "No buyer requests on your listings yet.", ta: "No buyer requests on your listings yet.", te: "No buyer requests on your listings yet.",
+    kn: "No buyer requests on your listings yet.", gu: "No buyer requests on your listings yet.", pa: "No buyer requests on your listings yet.", bn: "No buyer requests on your listings yet.", ml: "No buyer requests on your listings yet.", or: "No buyer requests on your listings yet.",
+  },
+  marketplace_no_buy_requests: {
+    en: "You have not sent any buy requests yet.", hi: "You have not sent any buy requests yet.", mr: "You have not sent any buy requests yet.", ta: "You have not sent any buy requests yet.", te: "You have not sent any buy requests yet.",
+    kn: "You have not sent any buy requests yet.", gu: "You have not sent any buy requests yet.", pa: "You have not sent any buy requests yet.", bn: "You have not sent any buy requests yet.", ml: "You have not sent any buy requests yet.", or: "You have not sent any buy requests yet.",
+  },
+  marketplace_inquiry_status: {
+    en: "Status", hi: "Status", mr: "Status", ta: "Status", te: "Status",
+    kn: "Status", gu: "Status", pa: "Status", bn: "Status", ml: "Status", or: "Status",
+  },
+
+  // Seller dashboard
+  sell_dashboard_title: {
+    en: "Sell Dashboard", hi: "Sell Dashboard", mr: "Sell Dashboard", ta: "Sell Dashboard", te: "Sell Dashboard",
+    kn: "Sell Dashboard", gu: "Sell Dashboard", pa: "Sell Dashboard", bn: "Sell Dashboard", ml: "Sell Dashboard", or: "Sell Dashboard",
+  },
+  sell_dashboard_subtitle: {
+    en: "Manage your sale posts and buyer requests.", hi: "Manage your sale posts and buyer requests.", mr: "Manage your sale posts and buyer requests.", ta: "Manage your sale posts and buyer requests.", te: "Manage your sale posts and buyer requests.",
+    kn: "Manage your sale posts and buyer requests.", gu: "Manage your sale posts and buyer requests.", pa: "Manage your sale posts and buyer requests.", bn: "Manage your sale posts and buyer requests.", ml: "Manage your sale posts and buyer requests.", or: "Manage your sale posts and buyer requests.",
+  },
+  sell_active_listings: {
+    en: "Live Sale Posts", hi: "Live Sale Posts", mr: "Live Sale Posts", ta: "Live Sale Posts", te: "Live Sale Posts",
+    kn: "Live Sale Posts", gu: "Live Sale Posts", pa: "Live Sale Posts", bn: "Live Sale Posts", ml: "Live Sale Posts", or: "Live Sale Posts",
+  },
+  sell_pending_review: {
+    en: "Pending Approval", hi: "Pending Approval", mr: "Pending Approval", ta: "Pending Approval", te: "Pending Approval",
+    kn: "Pending Approval", gu: "Pending Approval", pa: "Pending Approval", bn: "Pending Approval", ml: "Pending Approval", or: "Pending Approval",
+  },
+  sell_sold_listings: {
+    en: "Sold", hi: "Sold", mr: "Sold", ta: "Sold", te: "Sold",
+    kn: "Sold", gu: "Sold", pa: "Sold", bn: "Sold", ml: "Sold", or: "Sold",
+  },
+  sell_open_buy_requests: {
+    en: "Open Buy Requests", hi: "Open Buy Requests", mr: "Open Buy Requests", ta: "Open Buy Requests", te: "Open Buy Requests",
+    kn: "Open Buy Requests", gu: "Open Buy Requests", pa: "Open Buy Requests", bn: "Open Buy Requests", ml: "Open Buy Requests", or: "Open Buy Requests",
+  },
+  sell_your_sale_posts: {
+    en: "Your Sale Posts", hi: "Your Sale Posts", mr: "Your Sale Posts", ta: "Your Sale Posts", te: "Your Sale Posts",
+    kn: "Your Sale Posts", gu: "Your Sale Posts", pa: "Your Sale Posts", bn: "Your Sale Posts", ml: "Your Sale Posts", or: "Your Sale Posts",
+  },
+  sell_no_posts: {
+    en: "No sale posts yet. Add one from Marketplace.", hi: "No sale posts yet. Add one from Marketplace.", mr: "No sale posts yet. Add one from Marketplace.", ta: "No sale posts yet. Add one from Marketplace.", te: "No sale posts yet. Add one from Marketplace.",
+    kn: "No sale posts yet. Add one from Marketplace.", gu: "No sale posts yet. Add one from Marketplace.", pa: "No sale posts yet. Add one from Marketplace.", bn: "No sale posts yet. Add one from Marketplace.", ml: "No sale posts yet. Add one from Marketplace.", or: "No sale posts yet. Add one from Marketplace.",
+  },
+  sell_edit: {
+    en: "Edit", hi: "Edit", mr: "Edit", ta: "Edit", te: "Edit",
+    kn: "Edit", gu: "Edit", pa: "Edit", bn: "Edit", ml: "Edit", or: "Edit",
+  },
+  sell_delete: {
+    en: "Delete", hi: "Delete", mr: "Delete", ta: "Delete", te: "Delete",
+    kn: "Delete", gu: "Delete", pa: "Delete", bn: "Delete", ml: "Delete", or: "Delete",
+  },
+  sell_mark_sold: {
+    en: "Mark Sold", hi: "Mark Sold", mr: "Mark Sold", ta: "Mark Sold", te: "Mark Sold",
+    kn: "Mark Sold", gu: "Mark Sold", pa: "Mark Sold", bn: "Mark Sold", ml: "Mark Sold", or: "Mark Sold",
+  },
+  sell_replace_images: {
+    en: "Replace images (optional)", hi: "Replace images (optional)", mr: "Replace images (optional)", ta: "Replace images (optional)", te: "Replace images (optional)",
+    kn: "Replace images (optional)", gu: "Replace images (optional)", pa: "Replace images (optional)", bn: "Replace images (optional)", ml: "Replace images (optional)", or: "Replace images (optional)",
+  },
+  sell_new_images_selected: {
+    en: "{count} new image(s) selected", hi: "{count} new image(s) selected", mr: "{count} new image(s) selected", ta: "{count} new image(s) selected", te: "{count} new image(s) selected",
+    kn: "{count} new image(s) selected", gu: "{count} new image(s) selected", pa: "{count} new image(s) selected", bn: "{count} new image(s) selected", ml: "{count} new image(s) selected", or: "{count} new image(s) selected",
+  },
+  sell_save_changes: {
+    en: "Save Changes", hi: "Save Changes", mr: "Save Changes", ta: "Save Changes", te: "Save Changes",
+    kn: "Save Changes", gu: "Save Changes", pa: "Save Changes", bn: "Save Changes", ml: "Save Changes", or: "Save Changes",
+  },
+  sell_cancel: {
+    en: "Cancel", hi: "Cancel", mr: "Cancel", ta: "Cancel", te: "Cancel",
+    kn: "Cancel", gu: "Cancel", pa: "Cancel", bn: "Cancel", ml: "Cancel", or: "Cancel",
+  },
+  sell_buyer_messages: {
+    en: "Buyer Requests", hi: "Buyer Requests", mr: "Buyer Requests", ta: "Buyer Requests", te: "Buyer Requests",
+    kn: "Buyer Requests", gu: "Buyer Requests", pa: "Buyer Requests", bn: "Buyer Requests", ml: "Buyer Requests", or: "Buyer Requests",
+  },
+  sell_no_buyer_messages: {
+    en: "No buyer requests yet.", hi: "No buyer requests yet.", mr: "No buyer requests yet.", ta: "No buyer requests yet.", te: "No buyer requests yet.",
+    kn: "No buyer requests yet.", gu: "No buyer requests yet.", pa: "No buyer requests yet.", bn: "No buyer requests yet.", ml: "No buyer requests yet.", or: "No buyer requests yet.",
+  },
+  sell_from: {
+    en: "From", hi: "From", mr: "From", ta: "From", te: "From",
+    kn: "From", gu: "From", pa: "From", bn: "From", ml: "From", or: "From",
+  },
+  sell_buyer: {
+    en: "Buyer", hi: "Buyer", mr: "Buyer", ta: "Buyer", te: "Buyer",
+    kn: "Buyer", gu: "Buyer", pa: "Buyer", bn: "Buyer", ml: "Buyer", or: "Buyer",
+  },
+  sell_mark_replied: {
+    en: "Mark Replied", hi: "Mark Replied", mr: "Mark Replied", ta: "Mark Replied", te: "Mark Replied",
+    kn: "Mark Replied", gu: "Mark Replied", pa: "Mark Replied", bn: "Mark Replied", ml: "Mark Replied", or: "Mark Replied",
+  },
+  sell_close_request: {
+    en: "Close Request", hi: "Close Request", mr: "Close Request", ta: "Close Request", te: "Close Request",
+    kn: "Close Request", gu: "Close Request", pa: "Close Request", bn: "Close Request", ml: "Close Request", or: "Close Request",
   },
   news_dashboard_card_desc: {
     en: "Daily advisories, market updates, and offer highlights", hi: "दैनिक सलाह, बाजार अपडेट और ऑफ़र हाइलाइट्स", mr: "दैनंदिन सल्ले, बाजार अपडेट आणि ऑफर हायलाइट्स", ta: "தினசரி ஆலோசனைகள், சந்தை புதுப்பிப்புகள் மற்றும் சலுகைகள்", te: "దినసరి సలహాలు, మార్కెట్ అప్డేట్లు మరియు ఆఫర్ ముఖ్యాంశాలు",

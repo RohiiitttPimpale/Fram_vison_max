@@ -16,12 +16,40 @@ export const newsQueryKeys = {
   headlines: ["news", "headlines"] as const,
   newsList: (region?: string) => ["news", "list", region || "all"] as const,
   offersList: (region?: string) => ["news", "offers", region || "all"] as const,
+  dashboardNews: (region?: string) => ["news", "dashboard", "news", region || "all"] as const,
+  dashboardOffers: (region?: string) => ["news", "dashboard", "offers", region || "all"] as const,
 };
 
 export const useNewsHeadlines = () =>
   useQuery<HeadlineResponse>({
     queryKey: newsQueryKeys.headlines,
     queryFn: () => apiClient.getNewsHeadlines(3),
+    staleTime: CACHE_STALE_MS,
+    gcTime: CACHE_GC_MS,
+  });
+
+export const useDashboardTopNews = (region?: string) =>
+  useQuery<PaginatedResponse<NewsItem>>({
+    queryKey: newsQueryKeys.dashboardNews(region),
+    queryFn: () =>
+      apiClient.getNewsFeed({
+        page: 1,
+        limit: 3,
+        region,
+      }),
+    staleTime: CACHE_STALE_MS,
+    gcTime: CACHE_GC_MS,
+  });
+
+export const useDashboardTopOffers = (region?: string) =>
+  useQuery<PaginatedResponse<OfferItem>>({
+    queryKey: newsQueryKeys.dashboardOffers(region),
+    queryFn: () =>
+      apiClient.getOffersFeed({
+        page: 1,
+        limit: 3,
+        region,
+      }),
     staleTime: CACHE_STALE_MS,
     gcTime: CACHE_GC_MS,
   });

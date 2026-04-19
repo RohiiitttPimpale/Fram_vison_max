@@ -2,9 +2,14 @@ interface NominatimResponse {
   display_name?: string;
   address?: {
     city?: string;
+    municipality?: string;
     town?: string;
     village?: string;
+    hamlet?: string;
+    suburb?: string;
+    city_district?: string;
     county?: string;
+    state_district?: string;
     state?: string;
     country?: string;
   };
@@ -30,7 +35,8 @@ export const extractLocation = async (): Promise<string> => {
   const lat = position.coords.latitude;
   const lon = position.coords.longitude;
 
-  const url = `https://nominatim.openstreetmap.org/reverse?format=jsonv2&lat=${lat}&lon=${lon}`;
+  // Use administrative zoom so results prefer city/district labels over neighborhood-level names.
+  const url = `https://nominatim.openstreetmap.org/reverse?format=jsonv2&addressdetails=1&zoom=10&lat=${lat}&lon=${lon}`;
   const response = await fetch(url, {
     headers: {
       Accept: "application/json",
@@ -43,7 +49,17 @@ export const extractLocation = async (): Promise<string> => {
 
   const data = (await response.json()) as NominatimResponse;
   const address = data.address || {};
-  const primary = address.city || address.town || address.village || address.county;
+
+  const primary =
+    address.city ||
+    address.town ||
+    address.municipality ||
+    address.city_district ||
+    address.county ||
+    address.state_district ||
+    address.village ||
+    address.hamlet ||
+    address.suburb;
   const parts = [primary, address.state, address.country].filter(Boolean);
 
   if (parts.length > 0) {

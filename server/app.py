@@ -14,6 +14,7 @@ from routes.prediction import prediction_bp
 from routes.tasks import tasks_bp
 from routes.disease import disease_bp
 from routes.content import content_bp
+from routes.marketplace import marketplace_bp
 
 # Load environment variables
 load_dotenv()
@@ -67,6 +68,7 @@ def create_app(config_name=None):
     app.register_blueprint(tasks_bp)
     app.register_blueprint(disease_bp)
     app.register_blueprint(content_bp)
+    app.register_blueprint(marketplace_bp)
     
     # Create tables
     with app.app_context():

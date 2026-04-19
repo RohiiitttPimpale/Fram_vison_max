@@ -42,10 +42,12 @@ class ApiClient {
   /**
    * Get headers with optional auth token
    */
-  private getHeaders(includeAuth: boolean = true): Record<string, string> {
-    const headers: Record<string, string> = {
-      "Content-Type": "application/json",
-    };
+  private getHeaders(includeAuth: boolean = true, withJsonContentType: boolean = true): Record<string, string> {
+    const headers: Record<string, string> = {};
+
+    if (withJsonContentType) {
+      headers["Content-Type"] = "application/json";
+    }
 
     if (includeAuth && this.token) {
       headers["Authorization"] = `Bearer ${this.token}`;
@@ -92,6 +94,34 @@ class ApiClient {
     } catch (error) {
       throw error;
     }
+  }
+
+  private async requestForm<T>(
+    endpoint: string,
+    method: string,
+    body: FormData,
+    includeAuth: boolean = true
+  ): Promise<T> {
+    const url = `${this.baseUrl}${endpoint}`;
+    const response = await fetch(url, {
+      method,
+      headers: this.getHeaders(includeAuth, false),
+      body,
+    });
+
+    if (!response.ok) {
+      let errorMessage = "API request failed";
+      try {
+        const errorData = await response.json();
+        errorMessage = errorData.error || errorData.message || errorData.msg || errorMessage;
+      } catch {
+        // Keep default when response is not JSON.
+      }
+      throw new Error(errorMessage);
+    }
+
+    const data: ApiResponse<T> = await response.json();
+    return data.data || (data as T);
   }
 
   /**
@@ -276,6 +306,78 @@ class ApiClient {
   async trackContentClick(payload: ContentClickTelemetry): Promise<{ ok: boolean }> {
     return this.request("/content/telemetry/click", "POST", payload);
   }
+
+  // ===== MARKETPLACE ENDPOINTS =====
+
+  async getMarketplaceListings(params: {
+    kind?: "crop" | "seed";
+    location?: string;
+    search?: string;
+    page?: number;
+    limit?: number;
+  } = {}): Promise<MarketplaceListingsResponse> {
+    const query = this.buildQuery({
+      kind: params.kind,
+      location: params.location,
+      search: params.search,
+      page: params.page ?? 1,
+      limit: params.limit ?? 10,
+    });
+    return this.request(`/marketplace/listings${query}`, "GET", null, false);
+  }
+
+  async createMarketplaceListing(payload: CreateMarketplaceListingPayload): Promise<MarketplaceListing> {
+    return this.request("/marketplace/listings", "POST", payload);
+  }
+
+  async getMyMarketplaceListings(): Promise<{ items: MarketplaceListing[] }> {
+    return this.request("/marketplace/listings/mine", "GET");
+  }
+
+  async markMarketplaceListingSold(listingId: number): Promise<MarketplaceListing> {
+    return this.request(`/marketplace/listings/${listingId}/mark-sold`, "POST", {});
+  }
+
+  async updateMarketplaceListing(listingId: number, payload: UpdateMarketplaceListingPayload): Promise<MarketplaceListing> {
+    return this.request(`/marketplace/listings/${listingId}`, "PUT", payload);
+  }
+
+  async deleteMarketplaceListing(listingId: number): Promise<void> {
+    return this.request(`/marketplace/listings/${listingId}`, "DELETE");
+  }
+
+  async uploadMarketplaceImage(file: File): Promise<{ image_url: string }> {
+    const body = new FormData();
+    body.append("image", file);
+    return this.requestForm("/marketplace/uploads", "POST", body);
+  }
+
+  async createMarketplaceInquiry(
+    listingId: number,
+    payload: { message: string }
+  ): Promise<MarketplaceInquiry> {
+    return this.request(`/marketplace/listings/${listingId}/inquiries`, "POST", payload);
+  }
+
+  async getMyMarketplaceInquiries(): Promise<MarketplaceMyInquiriesResponse> {
+    return this.request("/marketplace/inquiries/mine", "GET");
+  }
+
+  async updateMarketplaceInquiryStatus(inquiryId: number, status: MarketplaceInquiryStatus): Promise<MarketplaceInquiry> {
+    return this.request(`/marketplace/inquiries/${inquiryId}/status`, "PATCH", { status });
+  }
+
+  async getMarketplaceAdminListings(status?: MarketplaceListingStatus): Promise<{ items: MarketplaceListing[] }> {
+    const query = this.buildQuery({ status });
+    return this.request(`/marketplace/admin/listings${query}`, "GET");
+  }
+
+  async moderateMarketplaceListing(
+    listingId: number,
+    payload: { action: "approve" | "block" | "reject"; reason?: string }
+  ): Promise<MarketplaceListing> {
+    return this.request(`/marketplace/admin/listings/${listingId}/moderate`, "PATCH", payload);
+  }
 }
 
 export interface UserProfile {
@@ -392,6 +494,74 @@ export interface ContentClickTelemetry {
   item_type: "news" | "offer";
   source: string;
   surface: "dashboard" | "news";
+}
+
+export interface MarketplaceListing {
+  id: number;
+  seller_id: number;
+  seller_name?: string;
+  title: string;
+  kind: "crop" | "seed";
+  quantity: number;
+  unit: string;
+  price_per_unit: number;
+  location?: string;
+  description?: string;
+  status: MarketplaceListingStatus;
+  images?: MarketplaceListingImage[];
+  primary_image_url?: string;
+  created_at?: string;
+}
+
+export type MarketplaceListingStatus = "pending" | "active" | "sold" | "blocked" | "rejected";
+
+export interface MarketplaceListingImage {
+  id: number;
+  listing_id: number;
+  image_url: string;
+}
+
+export interface MarketplaceListingsResponse {
+  items: MarketplaceListing[];
+  page: number;
+  limit: number;
+  total: number;
+  has_more: boolean;
+}
+
+export interface CreateMarketplaceListingPayload {
+  title: string;
+  kind: "crop" | "seed";
+  quantity: number;
+  unit: string;
+  price_per_unit: number;
+  location?: string;
+  description?: string;
+  image_urls?: string[];
+  accepted_policy: boolean;
+}
+
+export interface UpdateMarketplaceListingPayload extends Partial<CreateMarketplaceListingPayload> {}
+
+export interface MarketplaceInquiry {
+  id: number;
+  listing_id: number;
+  listing_title?: string;
+  buyer_id: number;
+  buyer_name?: string;
+  seller_id: number;
+  seller_name?: string;
+  message: string;
+  status: MarketplaceInquiryStatus;
+  created_at?: string;
+  updated_at?: string;
+}
+
+export type MarketplaceInquiryStatus = "open" | "responded" | "closed";
+
+export interface MarketplaceMyInquiriesResponse {
+  as_buyer: MarketplaceInquiry[];
+  as_seller: MarketplaceInquiry[];
 }
 
 export const apiClient = new ApiClient(API_BASE_URL);

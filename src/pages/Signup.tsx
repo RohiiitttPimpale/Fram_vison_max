@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useNavigate, Link } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
 import { useLanguage } from "@/contexts/LanguageContext";
@@ -17,6 +17,21 @@ const Signup = () => {
   const { signup, error } = useAuth();
   const { t } = useLanguage();
   const navigate = useNavigate();
+
+  useEffect(() => {
+    if (form.location) return;
+
+    const prefillLocation = async () => {
+      try {
+        const location = await extractLocation();
+        setForm((prev) => ({ ...prev, location }));
+      } catch {
+        // Ignore auto-detect failures. User can still enter location manually.
+      }
+    };
+
+    void prefillLocation();
+  }, [form.location]);
 
   const handleExtractLocation = async () => {
     try {

@@ -188,7 +188,7 @@ const YieldPrediction = () => {
               </Button>
               {weather && (
                 <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="mt-3 grid grid-cols-2 gap-2 text-sm text-muted-foreground">
-                  <span>Temp: {weather.temperature}deg C</span>
+                  <span>Temp: {weather.temperature}°C</span>
                   <span>Humidity: {weather.humidity}%</span>
                   <span>Rainfall: {weather.rainfall}mm</span>
                   <span>Condition: {weather.condition}</span>
@@ -199,36 +199,40 @@ const YieldPrediction = () => {
 
           <div className="agri-card space-y-5">
             <h3 className="font-semibold text-foreground">Model Inputs</h3>
+            <div className="rounded-lg border border-border bg-muted/40 p-3 text-xs text-muted-foreground leading-relaxed">
+              <p><span className="font-medium text-foreground">Units:</span> Area (hectares), Fertilizer (kg total), Pesticide (kg total), Temperature (°C), Rainfall (mm), Humidity (%), N/P/K (training scale), pH (0-14).</p>
+              <p className="mt-1"><span className="font-medium text-foreground">Output:</span> Predicted yield is in tons/hectare.</p>
+            </div>
 
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
-                <Label>Area</Label>
-                <Input type="number" value={area} onChange={(e) => setArea(e.target.value)} />
+                <Label>Area (hectares)</Label>
+                <Input type="number" placeholder="e.g. 1" value={area} onChange={(e) => setArea(e.target.value)} />
               </div>
               <div className="space-y-2">
-                <Label>Fertilizer</Label>
-                <Input type="number" value={fertilizer} onChange={(e) => setFertilizer(e.target.value)} />
+                <Label>Fertilizer (kg total)</Label>
+                <Input type="number" placeholder="e.g. 150" value={fertilizer} onChange={(e) => setFertilizer(e.target.value)} />
               </div>
               <div className="space-y-2">
-                <Label>Pesticide</Label>
-                <Input type="number" value={pesticide} onChange={(e) => setPesticide(e.target.value)} />
+                <Label>Pesticide (kg total)</Label>
+                <Input type="number" placeholder="e.g. 5" value={pesticide} onChange={(e) => setPesticide(e.target.value)} />
               </div>
               <div className="space-y-2">
-                <Label>N</Label>
+                <Label>N (training scale)</Label>
                 <Input type="number" value={nitrogen} onChange={(e) => setNitrogen(e.target.value)} />
               </div>
               <div className="space-y-2">
-                <Label>P</Label>
+                <Label>P (training scale)</Label>
                 <Input type="number" value={phosphorus} onChange={(e) => setPhosphorus(e.target.value)} />
               </div>
               <div className="space-y-2">
-                <Label>K</Label>
+                <Label>K (training scale)</Label>
                 <Input type="number" value={potassium} onChange={(e) => setPotassium(e.target.value)} />
               </div>
             </div>
 
             <div className="space-y-2">
-              <Label>pH</Label>
+              <Label>pH (0-14)</Label>
               <Input type="number" step="0.1" value={ph} onChange={(e) => setPh(e.target.value)} />
             </div>
 

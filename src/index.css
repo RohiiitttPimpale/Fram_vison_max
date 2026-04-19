@@ -6,23 +6,23 @@
 
 @layer base {
   :root {
-    --background: 150 20% 97%;
-    --foreground: 160 30% 12%;
+    --background: 55 33% 97%;
+    --foreground: 0 0% 10%;
 
     --card: 0 0% 100%;
-    --card-foreground: 160 30% 12%;
+    --card-foreground: 0 0% 10%;
 
     --popover: 0 0% 100%;
-    --popover-foreground: 160 30% 12%;
+    --popover-foreground: 0 0% 10%;
 
     --primary: 150 60% 32%;
     --primary-foreground: 0 0% 100%;
 
     --secondary: 160 15% 92%;
-    --secondary-foreground: 160 30% 12%;
+    --secondary-foreground: 0 0% 10%;
 
     --muted: 160 10% 94%;
-    --muted-foreground: 160 10% 42%;
+    --muted-foreground: 0 0% 24%;
 
     --accent: 45 80% 55%;
     --accent-foreground: 40 60% 18%;
@@ -52,23 +52,23 @@
   }
 
   .dark {
-    --background: 160 20% 8%;
-    --foreground: 150 10% 92%;
+    --background: 0 0% 0%;
+    --foreground: 0 0% 94%;
 
-    --card: 160 20% 10%;
-    --card-foreground: 150 10% 92%;
+    --card: 0 0% 3%;
+    --card-foreground: 0 0% 94%;
 
-    --popover: 160 20% 10%;
-    --popover-foreground: 150 10% 92%;
+    --popover: 0 0% 3%;
+    --popover-foreground: 0 0% 94%;
 
     --primary: 150 55% 42%;
     --primary-foreground: 0 0% 100%;
 
-    --secondary: 160 15% 18%;
-    --secondary-foreground: 150 10% 92%;
+    --secondary: 0 0% 10%;
+    --secondary-foreground: 0 0% 94%;
 
-    --muted: 160 12% 18%;
-    --muted-foreground: 160 8% 60%;
+    --muted: 0 0% 11%;
+    --muted-foreground: 0 0% 72%;
 
     --accent: 45 75% 50%;
     --accent-foreground: 40 60% 12%;
@@ -76,18 +76,57 @@
     --destructive: 0 62% 30%;
     --destructive-foreground: 0 0% 100%;
 
-    --border: 160 12% 22%;
-    --input: 160 12% 22%;
+    --border: 0 0% 17%;
+    --input: 0 0% 17%;
     --ring: 150 55% 42%;
 
-    --sidebar-background: 160 20% 8%;
-    --sidebar-foreground: 150 10% 90%;
+    --sidebar-background: 0 0% 0%;
+    --sidebar-foreground: 0 0% 90%;
     --sidebar-primary: 150 55% 42%;
     --sidebar-primary-foreground: 0 0% 100%;
-    --sidebar-accent: 160 12% 16%;
-    --sidebar-accent-foreground: 150 10% 90%;
-    --sidebar-border: 160 12% 20%;
+    --sidebar-accent: 0 0% 10%;
+    --sidebar-accent-foreground: 0 0% 90%;
+    --sidebar-border: 0 0% 16%;
     --sidebar-ring: 150 55% 42%;
+  }
+
+  .high-contrast {
+    --background: 60 14% 96%;
+    --foreground: 0 0% 10%;
+
+    --card: 0 0% 100%;
+    --card-foreground: 0 0% 10%;
+
+    --popover: 0 0% 100%;
+    --popover-foreground: 0 0% 10%;
+
+    --primary: 150 70% 26%;
+    --primary-foreground: 0 0% 100%;
+
+    --secondary: 0 0% 93%;
+    --secondary-foreground: 0 0% 10%;
+
+    --muted: 0 0% 92%;
+    --muted-foreground: 0 0% 18%;
+
+    --accent: 44 100% 43%;
+    --accent-foreground: 0 0% 8%;
+
+    --destructive: 0 82% 44%;
+    --destructive-foreground: 0 0% 100%;
+
+    --border: 0 0% 20%;
+    --input: 0 0% 20%;
+    --ring: 150 70% 26%;
+
+    --sidebar-background: 60 14% 96%;
+    --sidebar-foreground: 0 0% 10%;
+    --sidebar-primary: 150 70% 26%;
+    --sidebar-primary-foreground: 0 0% 100%;
+    --sidebar-accent: 0 0% 93%;
+    --sidebar-accent-foreground: 0 0% 10%;
+    --sidebar-border: 0 0% 20%;
+    --sidebar-ring: 150 70% 26%;
   }
 }
 
@@ -107,12 +146,29 @@
     font-weight: 700;
     letter-spacing: -0.03em;
   }
+
+  @media (max-width: 767px) {
+    body {
+      font-size: 14px;
+      line-height: 1.4;
+    }
+  }
 }
 
 @layer components {
   .agri-card {
     @apply bg-card border border-border rounded-2xl p-6;
     box-shadow: 0 1px 2px 0 rgba(0,0,0,0.05), 0 4px 12px -2px rgba(0,0,0,0.1);
+  }
+
+  .dark .agri-card {
+    box-shadow: 0 1px 2px 0 rgba(255,255,255,0.04), 0 4px 12px -2px rgba(255,255,255,0.05);
+  }
+
+  @media (max-width: 767px) {
+    .agri-card {
+      @apply rounded-xl p-4;
+    }
   }
 
   .agri-btn-press {

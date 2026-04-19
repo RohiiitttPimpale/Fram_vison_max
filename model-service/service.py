@@ -89,17 +89,20 @@ def predict():
     {
         "crop": "Rice",
         "state": "Uttar Pradesh",
-        "area": 10000,
-        "fertilizer": 150000,
-        "pesticide": 500,
-        "avg_temp_c": 25,
-        "total_rainfall_mm": 1200,
-        "avg_humidity_percent": 75,
-        "N": 80,
-        "P": 40,
-        "K": 30,
-        "pH": 6.5
+        "area": 10000,                  # hectares
+        "fertilizer": 150000,           # kg total for that area
+        "pesticide": 500,               # kg total for that area
+        "avg_temp_c": 25,               # degrees Celsius
+        "total_rainfall_mm": 1200,      # millimeters
+        "avg_humidity_percent": 75,     # percent
+        "N": 80,                        # soil N value (training scale)
+        "P": 40,                        # soil P value (training scale)
+        "K": 30,                        # soil K value (training scale)
+        "pH": 6.5                       # pH scale
     }
+
+    Output:
+        predicted_yield in tons/hectare
     """
     try:
         if MODEL is None:
