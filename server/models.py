@@ -73,6 +73,12 @@ class Crop(db.Model):
     # Relationships
     user = db.relationship("User", back_populates="crops")
     tasks = db.relationship("Task", back_populates="crop", cascade="all, delete-orphan")
+    health_checks = db.relationship(
+        "CropHealthCheck",
+        back_populates="crop",
+        cascade="all, delete-orphan",
+        order_by="CropHealthCheck.checked_at.desc()",
+    )
     
     def to_dict(self):
         """Convert to dictionary."""
@@ -84,6 +90,36 @@ class Crop(db.Model):
             "has_schedule": self.has_schedule,
             "soil_complete": self.soil_complete,
             "soil_data": self.soil_data,
+            "created_at": self.created_at.isoformat() if self.created_at else None,
+        }
+
+
+class CropHealthCheck(db.Model):
+    """Persisted crop health snapshots for trend tracking."""
+    __tablename__ = "crop_health_checks"
+
+    id = db.Column(db.Integer, primary_key=True)
+    crop_id = db.Column(db.Integer, db.ForeignKey("crops.id"), nullable=False, index=True)
+    score = db.Column(db.Integer, nullable=False)
+    status = db.Column(db.String(20), nullable=False, index=True)
+    factors = db.Column(db.JSON)
+    suggestions = db.Column(db.JSON)
+    context_hash = db.Column(db.String(255), nullable=False, index=True)
+    checked_at = db.Column(db.DateTime, default=datetime.utcnow, index=True)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+
+    crop = db.relationship("Crop", back_populates="health_checks")
+
+    def to_dict(self):
+        return {
+            "id": self.id,
+            "crop_id": self.crop_id,
+            "score": self.score,
+            "status": self.status,
+            "factors": self.factors or {},
+            "suggestions": self.suggestions or [],
+            "context_hash": self.context_hash,
+            "checked_at": self.checked_at.isoformat() if self.checked_at else None,
             "created_at": self.created_at.isoformat() if self.created_at else None,
         }
 

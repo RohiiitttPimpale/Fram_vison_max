@@ -137,7 +137,7 @@ const Marketplace = () => {
     const maxButtons = 5;
     const half = Math.floor(maxButtons / 2);
     let start = Math.max(1, page - half);
-    let end = Math.min(totalPages, start + maxButtons - 1);
+    const end = Math.min(totalPages, start + maxButtons - 1);
     start = Math.max(1, end - maxButtons + 1);
     return Array.from({ length: end - start + 1 }, (_, idx) => start + idx);
   }, [page, totalPages]);

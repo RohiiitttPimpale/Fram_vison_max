@@ -1,18 +1,24 @@
-import { useMemo, useCallback } from "react";
+import { useMemo, useCallback, useEffect, useRef, useState, type ChangeEvent } from "react";
 import { motion } from "framer-motion";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { DailyTask } from "@/lib/crop-schedules";
 import { SoilData } from "@/lib/soil-recommendations";
-import { simulateWeather, CROPS, predictYield, type WeatherData } from "@/lib/agri-data";
+import { simulateWeather, CROPS, predictYield, evaluateCropHealth, compareCropHealth, getTrendAwareSuggestions, type CropHealthTrend, type WeatherData } from "@/lib/agri-data";
+import { appendCropHealthSnapshot, readLatestCropHealthSnapshot, readLatestDiseaseSignal, saveLatestDiseaseSignal } from "@/lib/planner-persistence";
+import { apiClient } from "@/lib/api";
 import { Checkbox } from "@/components/ui/checkbox";
+import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Alert, AlertTitle, AlertDescription } from "@/components/ui/alert";
-import { Droplets, Leaf, Bug, BarChart3, Star, CalendarDays, Activity, AlertTriangle, CheckCircle2, Clock, TrendingUp, Bell } from "lucide-react";
+import { Droplets, Leaf, Bug, BarChart3, Star, CalendarDays, Activity, AlertTriangle, CheckCircle2, Clock, TrendingUp, Bell, Upload, X } from "lucide-react";
 import SmartTips from "./SmartTips";
 
 interface CropCareDashboardProps {
+  cropId: string | null;
+  cropDbId: number | null;
+  isTaskSyncFallback?: boolean;
   selectedCrop: string;
   startDate: string;
   schedule: DailyTask[];
@@ -21,6 +27,12 @@ interface CropCareDashboardProps {
   toggleTask: (task: DailyTask) => void;
   soilData?: SoilData | null;
   weatherData?: WeatherData | null;
+}
+
+interface PlannerDiseaseResult {
+  disease: string;
+  confidence: number;
+  severity: "low" | "medium" | "high";
 }
 
 const ALLOWED_CARE_STAGES = [
@@ -51,9 +63,13 @@ const GROWTH_PHASES = [
   { maxDay: Infinity, key: "phase_maturity" },
 ];
 
-type HealthStatus = "good" | "moderate" | "risk";
+const PHOTO_CHECK_INTERVAL_DAYS = 3;
+const PHOTO_CHECK_GRACE_DAYS = 2;
 
 const CropCareDashboard = ({
+  cropId,
+  cropDbId,
+  isTaskSyncFallback = false,
   selectedCrop,
   startDate,
   schedule,
@@ -64,8 +80,112 @@ const CropCareDashboard = ({
   weatherData,
 }: CropCareDashboardProps) => {
   const { t } = useLanguage();
+  const [healthTrend, setHealthTrend] = useState<CropHealthTrend | null>(null);
+  const [lastCheckedAt, setLastCheckedAt] = useState<string | null>(null);
+  const [isHealthSyncFallback, setIsHealthSyncFallback] = useState(false);
+  const [diseaseSignal, setDiseaseSignal] = useState(() => readLatestDiseaseSignal(cropId || undefined, 7));
+  const [scanImageFile, setScanImageFile] = useState<File | null>(null);
+  const [scanImagePreview, setScanImagePreview] = useState<string | null>(null);
+  const [scanResult, setScanResult] = useState<PlannerDiseaseResult | null>(null);
+  const [scanLoading, setScanLoading] = useState(false);
+  const [scanError, setScanError] = useState<string | null>(null);
+  const photoUploadCardRef = useRef<HTMLDivElement | null>(null);
+  const latestContextHashRef = useRef<string | null>(null);
 
   const effectiveWeather = useMemo(() => weatherData || simulateWeather(), [weatherData]);
+  useEffect(() => {
+    setDiseaseSignal(readLatestDiseaseSignal(cropId || undefined, 7));
+  }, [cropId]);
+
+  const handleSelectScanImage = useCallback((event: ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+    setScanImageFile(file);
+    setScanResult(null);
+    setScanError(null);
+
+    const reader = new FileReader();
+    reader.onloadend = () => {
+      setScanImagePreview(reader.result as string);
+    };
+    reader.readAsDataURL(file);
+  }, []);
+
+  const clearScanImage = useCallback(() => {
+    setScanImageFile(null);
+    setScanImagePreview(null);
+    setScanError(null);
+    setScanResult(null);
+  }, []);
+
+  const focusPhotoUpload = useCallback(() => {
+    photoUploadCardRef.current?.scrollIntoView({ behavior: "smooth", block: "center" });
+  }, []);
+
+  const runDiseaseScan = useCallback(async () => {
+    if (!scanImageFile) return;
+    const token = apiClient.getToken();
+    if (!token) {
+      setScanError("Please log in again and retry disease scan.");
+      return;
+    }
+
+    try {
+      setScanLoading(true);
+      setScanError(null);
+
+      const formData = new FormData();
+      formData.append("file", scanImageFile);
+
+      const apiBase = import.meta.env.VITE_API_URL || "/api";
+      const response = await fetch(`${apiBase}/disease-detection/upload`, {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+        body: formData,
+      });
+
+      if (!response.ok) {
+        let message = `Disease scan failed (${response.status})`;
+        try {
+          const payload = await response.json();
+          message = payload?.error || payload?.message || message;
+        } catch {
+          // Keep generic message if payload is not JSON.
+        }
+        throw new Error(message);
+      }
+
+      const payload = await response.json();
+      const result = payload?.data;
+      if (!result) {
+        throw new Error("Invalid disease scan response");
+      }
+
+      const nextResult: PlannerDiseaseResult = {
+        disease: result.disease,
+        confidence: Math.round(Number(result.confidence) * 100),
+        severity: result.severity,
+      };
+
+      setScanResult(nextResult);
+
+      const signal = {
+        disease: result.disease,
+        severity: result.severity,
+        confidence: Number(result.confidence),
+        checkedAt: new Date().toISOString(),
+      } as const;
+
+      setDiseaseSignal(signal);
+      saveLatestDiseaseSignal(signal, cropId || undefined);
+    } catch (error) {
+      setScanError(error instanceof Error ? error.message : "Disease scan failed");
+    } finally {
+      setScanLoading(false);
+    }
+  }, [scanImageFile, cropId]);
 
 
 
@@ -80,6 +200,46 @@ const CropCareDashboard = ({
   const currentPhase = useMemo(() => {
     return GROWTH_PHASES.find(p => daysSinceSowing <= p.maxDay)?.key || "phase_maturity";
   }, [daysSinceSowing]);
+
+  const photoTaskStatus = useMemo(() => {
+    const scanAgeDay = diseaseSignal?.checkedAt
+      ? Math.floor((new Date(diseaseSignal.checkedAt).getTime() - new Date(startDate).getTime()) / (1000 * 60 * 60 * 24))
+      : null;
+
+    if (daysSinceSowing < PHOTO_CHECK_INTERVAL_DAYS) {
+      return {
+        kind: "upcoming" as const,
+        dueDay: PHOTO_CHECK_INTERVAL_DAYS,
+        message: `Take your first crop photo on day ${PHOTO_CHECK_INTERVAL_DAYS}.`,
+      };
+    }
+
+    const currentCycleDay = Math.floor(daysSinceSowing / PHOTO_CHECK_INTERVAL_DAYS) * PHOTO_CHECK_INTERVAL_DAYS;
+    const cycleCovered = typeof scanAgeDay === "number" && scanAgeDay >= currentCycleDay;
+
+    if (cycleCovered) {
+      return {
+        kind: "completed" as const,
+        dueDay: currentCycleDay + PHOTO_CHECK_INTERVAL_DAYS,
+        message: `Photo task completed for this cycle. Next photo due on day ${currentCycleDay + PHOTO_CHECK_INTERVAL_DAYS}.`,
+      };
+    }
+
+    const delay = Math.max(0, daysSinceSowing - currentCycleDay);
+    if (delay > PHOTO_CHECK_GRACE_DAYS) {
+      return {
+        kind: "overdue" as const,
+        dueDay: currentCycleDay,
+        message: `Photo task overdue by ${delay - PHOTO_CHECK_GRACE_DAYS} day(s). Upload a crop image now.`,
+      };
+    }
+
+    return {
+      kind: "due" as const,
+      dueDay: currentCycleDay,
+      message: `Photo task due now (every ${PHOTO_CHECK_INTERVAL_DAYS} days). Upload a new crop image.`,
+    };
+  }, [diseaseSignal?.checkedAt, daysSinceSowing, startDate]);
 
   // Care tasks: only irrigation, fertilization, pest control, growth monitoring
   const careTasks = useMemo(() => {
@@ -120,17 +280,119 @@ const CropCareDashboard = ({
     return [...overdueTasks, ...todaysTasks].slice(0, 3);
   }, [overdueTasks, todaysTasks]);
 
-  // Crop Health Status
-  const healthStatus: HealthStatus = useMemo(() => {
-    if (overdueTasks.length > 0) return "risk";
-    const relevantTasks = careTasks.filter(t => daysSinceSowing >= t.dayStart);
-    if (relevantTasks.length === 0) return "good";
-    const doneCount = relevantTasks.filter(t => completedTasks.has(getTaskId(t))).length;
-    const ratio = doneCount / relevantTasks.length;
-    if (ratio >= 0.8) return "good";
-    if (ratio >= 0.5) return "moderate";
-    return "risk";
-  }, [careTasks, completedTasks, getTaskId, overdueTasks, daysSinceSowing]);
+  const healthEvaluation = useMemo(() => {
+    return evaluateCropHealth({
+      cropName: selectedCrop,
+      schedule,
+      completedTasks,
+      getTaskId,
+      daysSinceSowing,
+      soilData,
+      weatherData: effectiveWeather,
+      diseaseSeverity: diseaseSignal?.severity,
+      diseaseConfidence: diseaseSignal?.confidence,
+    });
+  }, [selectedCrop, schedule, completedTasks, getTaskId, daysSinceSowing, soilData, effectiveWeather, diseaseSignal?.severity, diseaseSignal?.confidence]);
+
+  useEffect(() => {
+    if (!cropId) {
+      setHealthTrend(null);
+      setLastCheckedAt(null);
+      latestContextHashRef.current = null;
+      return;
+    }
+
+    const contextHash = [
+      selectedCrop,
+      daysSinceSowing,
+      healthEvaluation.score,
+      healthEvaluation.factors.task,
+      healthEvaluation.factors.weather,
+      healthEvaluation.factors.soil,
+      healthEvaluation.factors.disease,
+      completedTasks.size,
+    ].join("|");
+
+    if (latestContextHashRef.current === contextHash) {
+      return;
+    }
+
+    let isCancelled = false;
+
+    const persistAndCompare = async () => {
+      const now = new Date().toISOString();
+
+      if (cropDbId) {
+        try {
+          const serverHealth = await apiClient.getCropHealth(cropDbId, 10);
+          const previousSnapshot = serverHealth.latest;
+          const trend = previousSnapshot
+            ? compareCropHealth(
+                { score: healthEvaluation.score, factors: healthEvaluation.factors },
+                {
+                  score: previousSnapshot.score,
+                  factors: {
+                    task: Number(previousSnapshot.factors?.task ?? 0),
+                    weather: Number(previousSnapshot.factors?.weather ?? 0),
+                    soil: Number(previousSnapshot.factors?.soil ?? 0),
+                    disease: Number(previousSnapshot.factors?.disease ?? 0),
+                  },
+                },
+              )
+            : null;
+
+          await apiClient.createCropHealthSnapshot(cropDbId, {
+            score: healthEvaluation.score,
+            status: healthEvaluation.status,
+            factors: healthEvaluation.factors,
+            suggestions: healthEvaluation.suggestions,
+            context_hash: contextHash,
+            checked_at: now,
+          });
+
+          if (!isCancelled) {
+            latestContextHashRef.current = contextHash;
+            setHealthTrend(trend);
+            setLastCheckedAt(now);
+            setIsHealthSyncFallback(false);
+          }
+          return;
+        } catch {
+          // Fall back to local persistence for offline/error conditions.
+          if (!isCancelled) {
+            setIsHealthSyncFallback(true);
+          }
+        }
+      }
+
+      const previousSnapshot = readLatestCropHealthSnapshot(cropId);
+      const trend = previousSnapshot
+        ? compareCropHealth(
+            { score: healthEvaluation.score, factors: healthEvaluation.factors },
+            { score: previousSnapshot.score, factors: previousSnapshot.factors },
+          )
+        : null;
+
+      const nextSnapshot = {
+        ...healthEvaluation,
+        checkedAt: now,
+        contextHash,
+      };
+
+      appendCropHealthSnapshot(cropId, nextSnapshot);
+      if (!isCancelled) {
+        latestContextHashRef.current = contextHash;
+        setHealthTrend(trend);
+        setLastCheckedAt(now);
+      }
+    };
+
+    void persistAndCompare();
+
+    return () => {
+      isCancelled = true;
+    };
+  }, [cropId, cropDbId, selectedCrop, daysSinceSowing, healthEvaluation, completedTasks.size]);
 
   const healthConfig = {
     good: { label: t("health_good"), color: "bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300", icon: <CheckCircle2 size={16} className="text-green-600" /> },
@@ -198,8 +460,23 @@ const CropCareDashboard = ({
     return d.toLocaleDateString();
   };
 
+  const health = healthConfig[healthEvaluation.status];
+  const healthSuggestions = useMemo(
+    () => getTrendAwareSuggestions(healthEvaluation, healthTrend || undefined),
+    [healthEvaluation, healthTrend],
+  );
 
-  const health = healthConfig[healthStatus];
+  const trendText = useMemo(() => {
+    if (!healthTrend) {
+      return "First health check saved. Complete more tasks and run another check to see trend.";
+    }
+
+    if (healthTrend.direction === "stable") {
+      return `Stable trend (${healthTrend.deltaScore >= 0 ? "+" : ""}${healthTrend.deltaScore}) since last check.`;
+    }
+
+    return `${healthTrend.direction === "improved" ? "Improved" : "Decreased"} by ${Math.abs(healthTrend.deltaScore)} points (${healthTrend.percentChange >= 0 ? "+" : ""}${healthTrend.percentChange}%).`;
+  }, [healthTrend]);
 
   return (
     <div className="space-y-6">
@@ -211,10 +488,17 @@ const CropCareDashboard = ({
       >
         <div className="flex items-center justify-between mb-3">
           <h2 className="text-xl font-bold text-foreground">{t("planner_crop_care_dashboard")}</h2>
-          <Badge variant="secondary" className="text-xs">
-            <Activity size={12} className="mr-1" />
-            {t(currentPhase)}
-          </Badge>
+          <div className="flex items-center gap-2">
+            {(isTaskSyncFallback || isHealthSyncFallback) && (
+              <Badge variant="outline" className="text-[11px] text-amber-700 border-amber-300 bg-amber-50 dark:bg-amber-900/20">
+                Using local fallback
+              </Badge>
+            )}
+            <Badge variant="secondary" className="text-xs">
+              <Activity size={12} className="mr-1" />
+              {t(currentPhase)}
+            </Badge>
+          </div>
         </div>
 
         <div className="grid grid-cols-2 sm:grid-cols-5 gap-4 mb-4">
@@ -244,12 +528,144 @@ const CropCareDashboard = ({
           {/* Crop Health */}
           <div className={`text-center p-3 rounded-lg ${health.color}`}>
             <div className="mx-auto mb-1 flex justify-center">{health.icon}</div>
-            <p className="text-sm font-bold">{health.label}</p>
+            <p className="text-sm font-bold">{healthEvaluation.score}/100</p>
             <p className="text-xs opacity-80">{t("crop_health")}</p>
           </div>
         </div>
 
         <Progress value={progress} className="h-3" />
+
+        <div className="mt-4 rounded-lg border border-border bg-muted/30 p-3">
+          <div className="flex items-center justify-between gap-2 mb-2">
+            <p className="text-sm font-semibold text-foreground">{health.label}</p>
+            <p className="text-sm text-muted-foreground">{healthEvaluation.score}/100</p>
+          </div>
+          <Progress value={healthEvaluation.score} className="h-2" />
+          <p className={`mt-2 text-xs ${healthTrend?.direction === "declined" ? "text-destructive" : healthTrend?.direction === "improved" ? "text-emerald-600" : "text-muted-foreground"}`}>
+            {trendText}
+          </p>
+          {lastCheckedAt && (
+            <p className="mt-1 text-[11px] text-muted-foreground">
+              Last checked: {new Date(lastCheckedAt).toLocaleString()}
+            </p>
+          )}
+        </div>
+      </motion.div>
+
+      {/* Suggestions */}
+      {healthSuggestions.length > 0 && (
+        <motion.div
+          initial={{ opacity: 0, y: -10 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.02 }}
+          className="agri-card border-2 border-emerald-500/20 bg-emerald-50/30 dark:bg-emerald-900/10"
+        >
+          <div className="flex items-center gap-2 mb-3">
+            <Leaf size={18} className="text-emerald-600" />
+            <h3 className="font-semibold text-foreground">Health Improvement Suggestions</h3>
+          </div>
+          <div className="space-y-2">
+            {healthSuggestions.map((item) => (
+              <div key={item.id} className="rounded-lg border border-border bg-background/70 p-3">
+                <div className="flex items-center gap-2 mb-1">
+                  <Badge variant="secondary" className="text-[10px] uppercase tracking-wide">{item.factor}</Badge>
+                  <span className={`text-[11px] font-medium ${item.priority === "high" ? "text-destructive" : item.priority === "medium" ? "text-amber-600" : "text-muted-foreground"}`}>
+                    {item.priority} priority
+                  </span>
+                </div>
+                <p className="text-sm text-foreground">{item.message}</p>
+              </div>
+            ))}
+          </div>
+        </motion.div>
+      )}
+
+      {/* Disease Scan */}
+      <motion.div
+        initial={{ opacity: 0, y: -10 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ delay: 0.025 }}
+        className="agri-card border-2 border-primary/20"
+        ref={photoUploadCardRef}
+      >
+        <div className="flex items-center justify-between gap-2 mb-3">
+          <div>
+            <h3 className="font-semibold text-foreground">{t("disease_detection")}</h3>
+            <p className="text-xs text-muted-foreground">Upload crop image here to improve health score accuracy.</p>
+          </div>
+          {diseaseSignal && (
+            <Badge variant="outline" className="text-[11px]">
+              {t("severity")}: {t(diseaseSignal.severity)}
+            </Badge>
+          )}
+        </div>
+
+        {!scanImagePreview ? (
+          <label className="flex cursor-pointer flex-col items-center justify-center rounded-xl border-2 border-dashed border-border bg-muted/20 px-4 py-8 text-center hover:border-primary/40">
+            <Upload size={20} className="mb-2 text-primary" />
+            <p className="text-sm font-medium text-foreground">{t("upload_leaf")}</p>
+            <p className="text-xs text-muted-foreground mt-1">PNG, JPG, JPEG</p>
+            <input type="file" accept="image/*" className="hidden" onChange={handleSelectScanImage} />
+          </label>
+        ) : (
+          <div className="space-y-3">
+            <img src={scanImagePreview} alt={t("upload_leaf")} className="h-48 w-full rounded-xl object-cover" />
+            <div className="flex items-center gap-2">
+              <Button size="sm" onClick={() => void runDiseaseScan()} disabled={scanLoading}>
+                <Upload size={14} className="mr-1.5" />
+                {scanLoading ? t("analyzing") : t("detect_disease")}
+              </Button>
+              <Button type="button" size="sm" variant="outline" onClick={clearScanImage}>
+                <X size={14} className="mr-1.5" />
+                {t("reset")}
+              </Button>
+            </div>
+          </div>
+        )}
+
+        {scanError && (
+          <Alert variant="destructive" className="mt-3">
+            <AlertTriangle size={14} />
+            <AlertDescription className="text-xs">{scanError}</AlertDescription>
+          </Alert>
+        )}
+
+        {scanResult && (
+          <div className="mt-3 rounded-lg border border-border bg-muted/20 p-3 text-sm">
+            <p className="font-medium text-foreground">{scanResult.disease}</p>
+            <p className="text-xs text-muted-foreground mt-1">
+              {t("confidence")}: {scanResult.confidence}% · {t("severity")}: {t(scanResult.severity)}
+            </p>
+            <p className="text-xs text-emerald-700 dark:text-emerald-400 mt-2">
+              Scan included in health tracking.
+            </p>
+          </div>
+        )}
+      </motion.div>
+
+      <motion.div
+        initial={{ opacity: 0, y: -10 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ delay: 0.028 }}
+        className={`agri-card border-2 ${photoTaskStatus.kind === "overdue" ? "border-destructive/30 bg-destructive/5" : photoTaskStatus.kind === "due" ? "border-amber-500/30 bg-amber-50/40 dark:bg-amber-900/10" : "border-primary/20"}`}
+      >
+        <div className="flex items-center justify-between gap-3">
+          <div>
+            <h3 className="font-semibold text-foreground">Photo Monitoring Task</h3>
+            <p className="text-xs text-muted-foreground mt-1">{photoTaskStatus.message}</p>
+          </div>
+          <Badge variant={photoTaskStatus.kind === "overdue" ? "destructive" : "secondary"} className="whitespace-nowrap text-xs">
+            {photoTaskStatus.kind === "completed" ? "Completed" : photoTaskStatus.kind === "upcoming" ? "Upcoming" : photoTaskStatus.kind === "overdue" ? "Overdue" : "Due"}
+          </Badge>
+        </div>
+        {photoTaskStatus.kind !== "completed" && (
+          <div className="mt-3">
+            <Button size="sm" onClick={focusPhotoUpload}>
+              <Upload size={14} className="mr-1.5" />
+              Take Photo Now
+            </Button>
+          </div>
+        )}
       </motion.div>
 
       {/* Smart Alerts */}

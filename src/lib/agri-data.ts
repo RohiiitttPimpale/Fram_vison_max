@@ -1,4 +1,6 @@
 // Mock weather and crop data utilities
+import type { DailyTask } from "@/lib/crop-schedules";
+import type { SoilData } from "@/lib/soil-recommendations";
 
 export interface WeatherData {
   temperature: number;
@@ -270,6 +272,269 @@ export interface Recommendation {
   descParams: Record<string, string>;
   priority: "high" | "medium" | "low";
   icon: string;
+}
+
+export type CropHealthStatus = "good" | "moderate" | "risk";
+export type CropHealthFactorKey = "task" | "weather" | "soil" | "disease";
+
+export interface CropHealthFactorScores {
+  task: number;
+  weather: number;
+  soil: number;
+  disease: number;
+}
+
+export interface CropHealthSuggestion {
+  id: string;
+  factor: CropHealthFactorKey;
+  priority: "high" | "medium" | "low";
+  message: string;
+}
+
+export interface CropHealthEvaluation {
+  score: number;
+  status: CropHealthStatus;
+  factors: CropHealthFactorScores;
+  suggestions: CropHealthSuggestion[];
+}
+
+export interface CropHealthEvaluationInput {
+  cropName: string;
+  schedule: DailyTask[];
+  completedTasks: Set<string>;
+  getTaskId: (task: DailyTask) => string;
+  daysSinceSowing: number;
+  soilData?: SoilData | null;
+  weatherData?: WeatherData | null;
+  diseaseSeverity?: "low" | "medium" | "high" | null;
+  diseaseConfidence?: number | null;
+}
+
+export interface CropHealthTrend {
+  deltaScore: number;
+  percentChange: number;
+  direction: "improved" | "declined" | "stable";
+  factorDelta: Record<CropHealthFactorKey, number>;
+}
+
+const clamp = (value: number, min: number, max: number) => Math.max(min, Math.min(max, value));
+
+const getStatusFromScore = (score: number): CropHealthStatus => {
+  if (score >= 80) return "good";
+  if (score >= 55) return "moderate";
+  return "risk";
+};
+
+const getTaskHealthScore = (
+  schedule: DailyTask[],
+  completedTasks: Set<string>,
+  getTaskId: (task: DailyTask) => string,
+  daysSinceSowing: number,
+) => {
+  const careTasks = schedule.filter(
+    task =>
+      task.stageKey === "planner_stage_irrigation" ||
+      task.stageKey === "planner_stage_fertilization" ||
+      task.stageKey === "planner_stage_pest_control" ||
+      task.stageKey === "planner_stage_growth",
+  );
+  const relevant = careTasks.filter(task => daysSinceSowing >= task.dayStart);
+  if (relevant.length === 0) {
+    return { score: 80, overdueCount: 0 };
+  }
+
+  const doneCount = relevant.filter(task => completedTasks.has(getTaskId(task))).length;
+  const overdueCount = relevant.filter(task => daysSinceSowing > task.dayEnd && !completedTasks.has(getTaskId(task))).length;
+  const completionRatio = doneCount / relevant.length;
+  const overduePenalty = Math.min(45, overdueCount * 18);
+  const score = clamp(Math.round(completionRatio * 100 - overduePenalty), 0, 100);
+
+  return { score, overdueCount };
+};
+
+const getWeatherHealthScore = (crop: CropConfig | undefined, weatherData?: WeatherData | null) => {
+  if (!crop || !weatherData) {
+    return 70;
+  }
+
+  const [tempMin, tempMax] = crop.optimalTemp;
+  const [rainMin, rainMax] = crop.optimalRainfall;
+
+  const tempPenalty = weatherData.temperature < tempMin
+    ? Math.min(35, (tempMin - weatherData.temperature) * 4)
+    : weatherData.temperature > tempMax
+      ? Math.min(35, (weatherData.temperature - tempMax) * 4)
+      : 0;
+
+  const annualizedRain = weatherData.rainfall * 12;
+  const rainPenalty = annualizedRain < rainMin
+    ? Math.min(25, ((rainMin - annualizedRain) / Math.max(1, rainMin)) * 35)
+    : annualizedRain > rainMax
+      ? Math.min(25, ((annualizedRain - rainMax) / Math.max(1, rainMax)) * 30)
+      : 0;
+
+  const humidityPenalty = weatherData.humidity > 88 ? 12 : weatherData.humidity < 30 ? 10 : 0;
+  const windPenalty = weatherData.windSpeed > 30 ? 8 : 0;
+
+  return clamp(Math.round(100 - tempPenalty - rainPenalty - humidityPenalty - windPenalty), 0, 100);
+};
+
+const getSoilHealthScore = (crop: CropConfig | undefined, soilData?: SoilData | null) => {
+  if (!crop || !soilData) {
+    return 65;
+  }
+
+  const [phMin, phMax] = crop.optimalPH;
+  const phPenalty = soilData.ph < phMin
+    ? Math.min(30, (phMin - soilData.ph) * 18)
+    : soilData.ph > phMax
+      ? Math.min(30, (soilData.ph - phMax) * 18)
+      : 0;
+
+  const nPenalty = Math.min(25, Math.abs(1 - soilData.nitrogen / Math.max(1, crop.optimalN)) * 40);
+  const pPenalty = Math.min(25, Math.abs(1 - soilData.phosphorus / Math.max(1, crop.optimalP)) * 35);
+  const kPenalty = Math.min(25, Math.abs(1 - soilData.potassium / Math.max(1, crop.optimalK)) * 35);
+
+  return clamp(Math.round(100 - phPenalty - nPenalty - pPenalty - kPenalty), 0, 100);
+};
+
+const getDiseaseHealthScore = (
+  diseaseSeverity?: "low" | "medium" | "high" | null,
+  diseaseConfidence?: number | null,
+) => {
+  if (!diseaseSeverity) {
+    return 85;
+  }
+
+  const base = diseaseSeverity === "high" ? 25 : diseaseSeverity === "medium" ? 55 : 78;
+  const confidenceMultiplier = diseaseConfidence && diseaseConfidence > 0 ? clamp(diseaseConfidence, 0, 1) : 1;
+  const adjusted = Math.round(base + (1 - confidenceMultiplier) * 12);
+  return clamp(adjusted, 0, 100);
+};
+
+const buildSuggestions = (
+  factors: CropHealthFactorScores,
+  overdueCount: number,
+  trend?: CropHealthTrend,
+): CropHealthSuggestion[] => {
+  const suggestions: CropHealthSuggestion[] = [];
+
+  const factorPriority = Object.entries(factors)
+    .sort((a, b) => a[1] - b[1])
+    .map(entry => entry[0] as CropHealthFactorKey);
+
+  const weatherDeclined = trend ? trend.factorDelta.weather < 0 : factors.weather < 70;
+  const taskDeclined = trend ? trend.factorDelta.task < 0 : factors.task < 70;
+  const soilDeclined = trend ? trend.factorDelta.soil < 0 : factors.soil < 70;
+  const diseaseDeclined = trend ? trend.factorDelta.disease < 0 : factors.disease < 70;
+
+  if (taskDeclined || factors.task < 70) {
+    suggestions.push({
+      id: "task_adherence",
+      factor: "task",
+      priority: overdueCount > 0 ? "high" : "medium",
+      message: overdueCount > 0
+        ? `Complete ${overdueCount} overdue care task${overdueCount > 1 ? "s" : ""} first to recover crop health quickly.`
+        : "Keep daily care tasks on time for the next 3-5 days to improve crop health.",
+    });
+  }
+
+  if (weatherDeclined || factors.weather < 70) {
+    suggestions.push({
+      id: "weather_risk",
+      factor: "weather",
+      priority: "high",
+      message: "Weather stress is high. Prioritize irrigation timing and field protection for heat, rain, or wind this week.",
+    });
+  }
+
+  if (soilDeclined || factors.soil < 70) {
+    suggestions.push({
+      id: "soil_correction",
+      factor: "soil",
+      priority: "medium",
+      message: "Soil balance has dropped. Recheck pH and NPK, then apply correction in small split doses.",
+    });
+  }
+
+  if (diseaseDeclined || factors.disease < 70) {
+    suggestions.push({
+      id: "disease_action",
+      factor: "disease",
+      priority: "high",
+      message: "Recent disease risk increased. Upload a fresh leaf image and act on treatment within 24-48 hours.",
+    });
+  }
+
+  if (suggestions.length === 0) {
+    suggestions.push({
+      id: "maintenance",
+      factor: factorPriority[0] || "task",
+      priority: "low",
+      message: "Crop health is stable. Continue regular monitoring and keep the current care schedule consistent.",
+    });
+  }
+
+  return suggestions.slice(0, 3);
+};
+
+export function evaluateCropHealth(input: CropHealthEvaluationInput): CropHealthEvaluation {
+  const crop = CROPS.find(item => item.name === input.cropName);
+  const taskResult = getTaskHealthScore(input.schedule, input.completedTasks, input.getTaskId, input.daysSinceSowing);
+
+  const factors: CropHealthFactorScores = {
+    task: taskResult.score,
+    weather: getWeatherHealthScore(crop, input.weatherData),
+    soil: getSoilHealthScore(crop, input.soilData),
+    disease: getDiseaseHealthScore(input.diseaseSeverity, input.diseaseConfidence),
+  };
+
+  const weightedScore = Math.round(
+    factors.task * 0.45 +
+    factors.weather * 0.25 +
+    factors.soil * 0.2 +
+    factors.disease * 0.1,
+  );
+
+  const score = clamp(weightedScore, 0, 100);
+  const status = getStatusFromScore(score);
+  const suggestions = buildSuggestions(factors, taskResult.overdueCount);
+
+  return {
+    score,
+    status,
+    factors,
+    suggestions,
+  };
+}
+
+export function compareCropHealth(
+  current: Pick<CropHealthEvaluation, "score" | "factors">,
+  previous: Pick<CropHealthEvaluation, "score" | "factors">,
+): CropHealthTrend {
+  const deltaScore = current.score - previous.score;
+  const absolutePrevious = Math.max(1, previous.score);
+  const percentChange = Math.round((deltaScore / absolutePrevious) * 100);
+  const direction = Math.abs(deltaScore) < 2 ? "stable" : deltaScore > 0 ? "improved" : "declined";
+
+  return {
+    deltaScore,
+    percentChange,
+    direction,
+    factorDelta: {
+      task: current.factors.task - previous.factors.task,
+      weather: current.factors.weather - previous.factors.weather,
+      soil: current.factors.soil - previous.factors.soil,
+      disease: current.factors.disease - previous.factors.disease,
+    },
+  };
+}
+
+export function getTrendAwareSuggestions(
+  evaluation: CropHealthEvaluation,
+  trend?: CropHealthTrend,
+): CropHealthSuggestion[] {
+  return buildSuggestions(evaluation.factors, 0, trend);
 }
 
 export function getRecommendations(crop: CropConfig, weather: WeatherData, n: number, p: number, k: number): Recommendation[] {

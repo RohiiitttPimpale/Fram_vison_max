@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Upload, AlertTriangle, CheckCircle, Leaf, AlertCircle } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { apiClient } from "@/lib/api";
+import { saveLatestDiseaseSignal } from "@/lib/planner-persistence";
 
 interface ApiResponse {
   disease: string;
@@ -132,6 +133,12 @@ const DiseaseDetection = () => {
       };
 
       setResult(diagnosisResult);
+      saveLatestDiseaseSignal({
+        disease: data.disease,
+        severity: data.severity,
+        confidence: data.confidence,
+        checkedAt: new Date().toISOString(),
+      });
       toast({
         title: "Analysis Complete",
         description: `Detected: ${data.disease} (${diagnosisResult.confidence}% confidence)`,

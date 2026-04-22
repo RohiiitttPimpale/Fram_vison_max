@@ -75,25 +75,21 @@ class ApiClient {
       options.body = JSON.stringify(body);
     }
 
-    try {
-      const response = await fetch(url, options);
+    const response = await fetch(url, options);
 
-      if (!response.ok) {
-        let errorMessage = "API request failed";
-        try {
-          const errorData = await response.json();
-          errorMessage = errorData.error || errorData.message || errorData.msg || errorMessage;
-        } catch {
-          // Keep default message when response is not JSON.
-        }
-        throw new Error(errorMessage);
+    if (!response.ok) {
+      let errorMessage = "API request failed";
+      try {
+        const errorData = await response.json();
+        errorMessage = errorData.error || errorData.message || errorData.msg || errorMessage;
+      } catch {
+        // Keep default message when response is not JSON.
       }
-
-      const data: ApiResponse<T> = await response.json();
-      return data.data || (data as T);
-    } catch (error) {
-      throw error;
+      throw new Error(errorMessage);
     }
+
+    const data: ApiResponse<T> = await response.json();
+    return data.data || (data as T);
   }
 
   private async requestForm<T>(
@@ -218,6 +214,14 @@ class ApiClient {
    */
   async deleteCrop(cropId: number): Promise<void> {
     return this.request(`/crops/${cropId}`, "DELETE");
+  }
+
+  async getCropHealth(cropId: number, limit: number = 10): Promise<CropHealthResponse> {
+    return this.request(`/crops/${cropId}/health?limit=${limit}`, "GET");
+  }
+
+  async createCropHealthSnapshot(cropId: number, payload: CreateCropHealthSnapshotPayload): Promise<CropHealthSnapshot> {
+    return this.request(`/crops/${cropId}/health`, "POST", payload);
   }
 
   // ===== TASK ENDPOINTS =====
@@ -400,6 +404,45 @@ export interface Crop {
   created_at?: string;
 }
 
+export type CropHealthStatus = "good" | "moderate" | "risk";
+
+export interface CropHealthSnapshot {
+  id?: number;
+  crop_id?: number;
+  score: number;
+  status: CropHealthStatus;
+  factors: Record<string, number>;
+  suggestions: Array<{
+    id: string;
+    factor: string;
+    priority: "high" | "medium" | "low";
+    message: string;
+  }>;
+  context_hash: string;
+  checked_at: string;
+  created_at?: string;
+}
+
+export interface CropHealthResponse {
+  latest: CropHealthSnapshot | null;
+  previous: CropHealthSnapshot | null;
+  history: CropHealthSnapshot[];
+}
+
+export interface CreateCropHealthSnapshotPayload {
+  score: number;
+  status: CropHealthStatus;
+  factors: Record<string, number>;
+  suggestions: Array<{
+    id: string;
+    factor: string;
+    priority: "high" | "medium" | "low";
+    message: string;
+  }>;
+  context_hash: string;
+  checked_at?: string;
+}
+
 export interface Task {
   id?: number;
   crop_id?: number;
@@ -541,7 +584,7 @@ export interface CreateMarketplaceListingPayload {
   accepted_policy: boolean;
 }
 
-export interface UpdateMarketplaceListingPayload extends Partial<CreateMarketplaceListingPayload> {}
+export type UpdateMarketplaceListingPayload = Partial<CreateMarketplaceListingPayload>;
 
 export interface MarketplaceInquiry {
   id: number;

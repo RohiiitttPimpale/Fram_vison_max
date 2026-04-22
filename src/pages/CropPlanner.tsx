@@ -45,6 +45,8 @@ const mapEntryToApiCrop = (entry: CropEntry): Partial<ApiCrop> => ({
 const generateCropId = () => `crop_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
 const getTaskStorageKey = (cropId: string) => `agrismart_planner_tasks_${cropId}`;
 
+type TaskRecordMap = Record<string, { id: number; completed: boolean }>;
+
 const readCompletedTasks = (cropId: string): Set<string> => {
   try {
     const raw = localStorage.getItem(getTaskStorageKey(cropId));
@@ -59,6 +61,15 @@ const readCompletedTasks = (cropId: string): Set<string> => {
 
 const writeCompletedTasks = (cropId: string, completed: Set<string>) => {
   localStorage.setItem(getTaskStorageKey(cropId), JSON.stringify(Array.from(completed)));
+};
+
+const parseTaskKey = (taskKey: string): { task_key: string; day_start: number } | null => {
+  const match = taskKey.match(/_(-?\d+)$/);
+  if (!match) return null;
+  const day_start = Number(match[1]);
+  if (!Number.isFinite(day_start)) return null;
+  const key = taskKey.slice(0, taskKey.length - match[0].length);
+  return { task_key: key, day_start };
 };
 
 const CropPlanner = () => {
@@ -81,6 +92,8 @@ const CropPlanner = () => {
   const [startDate, setStartDate] = useState(today);
   const [schedule, setSchedule] = useState<DailyTask[] | null>(null);
   const [completedTasks, setCompletedTasks] = useState<Set<string>>(new Set());
+  const [taskRecords, setTaskRecords] = useState<TaskRecordMap>({});
+  const [isTaskSyncFallback, setIsTaskSyncFallback] = useState(false);
   const [isHarvestCompleted, setIsHarvestCompleted] = useState(false);
 
   // Load crops from backend on mount
@@ -130,24 +143,123 @@ const CropPlanner = () => {
     setSelectedCrop(crop.selectedCrop);
     setStartDate(crop.startDate);
     setSchedule(crop.hasSchedule ? (CROP_SCHEDULES[crop.selectedCrop] || null) : null);
-    setCompletedTasks(readCompletedTasks(crop.id));
+    setCompletedTasks(new Set());
+    setTaskRecords({});
   }, []);
+
+  const syncCompletedTasksFromBackend = useCallback(async (crop: CropEntry) => {
+    if (!crop._dbId) {
+      const localCompleted = readCompletedTasks(crop.id);
+      setCompletedTasks(localCompleted);
+      setTaskRecords({});
+      return;
+    }
+
+    try {
+      const tasks = await apiClient.getCropTasks(crop._dbId);
+
+      let taskList = tasks;
+      if (tasks.length === 0) {
+        const localCompleted = readCompletedTasks(crop.id);
+        if (localCompleted.size > 0) {
+          const migrated: typeof tasks = [];
+          for (const item of localCompleted) {
+            const parsed = parseTaskKey(item);
+            if (!parsed) continue;
+            try {
+              const created = await apiClient.createTask({
+                crop_id: crop._dbId,
+                task_key: parsed.task_key,
+                day_start: parsed.day_start,
+                completed: true,
+              });
+              migrated.push(created);
+            } catch {
+              // Skip failed migrations and continue remaining items.
+            }
+          }
+          taskList = migrated;
+        }
+      }
+
+      const nextRecords: TaskRecordMap = {};
+      const nextCompleted = new Set<string>();
+
+      taskList.forEach(task => {
+        if (typeof task.id !== "number") return;
+        const key = `${task.task_key}_${task.day_start}`;
+        nextRecords[key] = { id: task.id, completed: task.completed };
+        if (task.completed) nextCompleted.add(key);
+      });
+
+      setTaskRecords(nextRecords);
+      setCompletedTasks(nextCompleted);
+      writeCompletedTasks(crop.id, nextCompleted);
+      setIsTaskSyncFallback(false);
+    } catch {
+      const localCompleted = readCompletedTasks(crop.id);
+      setCompletedTasks(localCompleted);
+      setTaskRecords({});
+      setIsTaskSyncFallback(true);
+    }
+  }, []);
+
+  useEffect(() => {
+    if (!activeCrop) return;
+    void syncCompletedTasksFromBackend(activeCrop);
+  }, [activeCrop, syncCompletedTasksFromBackend]);
 
   const getTaskId = useCallback((task: DailyTask) => `${task.taskKey}_${task.dayStart}`, []);
 
-  const toggleTask = useCallback((task: DailyTask) => {
+  const toggleTask = useCallback(async (task: DailyTask) => {
     const cropId = activeCropId;
+    const dbId = activeCrop?._dbId;
     if (!cropId) return;
 
     const id = `${task.taskKey}_${task.dayStart}`;
-    setCompletedTasks(prev => {
-      const next = new Set(prev);
-      if (next.has(id)) next.delete(id);
-      else next.add(id);
-      writeCompletedTasks(cropId, next);
-      return next;
-    });
-  }, [activeCropId]);
+    const currentlyCompleted = completedTasks.has(id);
+    const nextCompleted = !currentlyCompleted;
+
+    const optimistic = new Set(completedTasks);
+    if (nextCompleted) optimistic.add(id);
+    else optimistic.delete(id);
+    setCompletedTasks(optimistic);
+    writeCompletedTasks(cropId, optimistic);
+
+    if (!dbId) {
+      setIsTaskSyncFallback(true);
+      return;
+    }
+
+    try {
+      const existing = taskRecords[id];
+      if (existing?.id) {
+        await apiClient.updateTask(existing.id, { completed: nextCompleted });
+        setTaskRecords(prev => ({ ...prev, [id]: { ...existing, completed: nextCompleted } }));
+        setIsTaskSyncFallback(false);
+      } else {
+        const created = await apiClient.createTask({
+          crop_id: dbId,
+          task_key: task.taskKey,
+          day_start: task.dayStart,
+          completed: nextCompleted,
+        });
+
+        if (typeof created.id === "number") {
+          setTaskRecords(prev => ({
+            ...prev,
+            [id]: { id: created.id, completed: created.completed },
+          }));
+        }
+        setIsTaskSyncFallback(false);
+      }
+    } catch {
+      const rollback = new Set(completedTasks);
+      setCompletedTasks(rollback);
+      writeCompletedTasks(cropId, rollback);
+      setIsTaskSyncFallback(true);
+    }
+  }, [activeCropId, activeCrop, completedTasks, taskRecords]);
 
   // Persist crop entry changes to backend
   const updateCropEntry = useCallback(
@@ -202,6 +314,7 @@ const CropPlanner = () => {
     setStartDate(today);
     setSchedule(null);
     setCompletedTasks(new Set());
+    setTaskRecords({});
     setView("newCrop");
   }, [today]);
 
@@ -228,6 +341,7 @@ const CropPlanner = () => {
           setStartDate(today);
           setSchedule(null);
           setCompletedTasks(new Set());
+          setTaskRecords({});
           setView("newCrop");
         }
       }
@@ -295,6 +409,7 @@ const CropPlanner = () => {
       setStartDate(today);
       setSchedule(null);
       setCompletedTasks(new Set());
+      setTaskRecords({});
       setView("newCrop");
       return;
     }
@@ -478,7 +593,19 @@ const CropPlanner = () => {
       )}
 
       {phase === "dashboard" && schedule && (
-        <CropCareDashboard selectedCrop={selectedCrop} startDate={startDate} schedule={schedule} completedTasks={completedTasks} getTaskId={getTaskId} toggleTask={toggleTask} soilData={soilData} weatherData={weather} />
+        <CropCareDashboard
+          cropId={activeCropId}
+          cropDbId={activeCrop?._dbId ?? null}
+          isTaskSyncFallback={isTaskSyncFallback}
+          selectedCrop={selectedCrop}
+          startDate={startDate}
+          schedule={schedule}
+          completedTasks={completedTasks}
+          getTaskId={getTaskId}
+          toggleTask={toggleTask}
+          soilData={soilData}
+          weatherData={weather}
+        />
       )}
 
       {phase === "finalStage" && schedule && (

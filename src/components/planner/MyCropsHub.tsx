@@ -1,15 +1,18 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { motion } from "framer-motion";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { CROP_NAME_KEYS } from "@/lib/translations";
 import { CROP_DURATIONS, CROP_SCHEDULES, DailyTask } from "@/lib/crop-schedules";
 import { SoilData } from "@/lib/soil-recommendations";
+import { readCropHealthHistory } from "@/lib/planner-persistence";
+import { apiClient } from "@/lib/api";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Plus, Sprout, Calendar, ChevronRight, AlertTriangle, Clock, CheckCircle2, Filter, Trash2 } from "lucide-react";
+import { Plus, Sprout, Calendar, ChevronRight, AlertTriangle, Clock, CheckCircle2, Filter, Trash2, Activity } from "lucide-react";
 
 export interface CropEntry {
   id: string;
+  _dbId?: number;
   selectedCrop: string;
   startDate: string;
   hasSchedule: boolean;
@@ -27,6 +30,8 @@ interface MyCropsHubProps {
   onAddNew: () => void;
   onRemoveCrop: (id: string) => void;
 }
+
+type CompletedTaskMap = Record<string, Set<string>>;
 
 const CARE_STAGES = new Set([
   "planner_stage_irrigation",
@@ -46,7 +51,11 @@ const getDaysSince = (startDate: string) => {
 
 const getTasksKey = (cropId: string) => `agrismart_planner_tasks_${cropId}`;
 
-const getAlerts = (crop: CropEntry, t: (key: string) => string): { text: string; type: "warning" | "info" | "error" }[] => {
+const getAlerts = (
+  crop: CropEntry,
+  t: (key: string) => string,
+  completedSetFromServer?: Set<string>,
+): { text: string; type: "warning" | "info" | "error" }[] => {
   const alerts: { text: string; type: "warning" | "info" | "error" }[] = [];
   if (!crop.startDate || !crop.hasSchedule) return alerts;
 
@@ -64,12 +73,14 @@ const getAlerts = (crop: CropEntry, t: (key: string) => string): { text: string;
   if (!schedule) return alerts;
 
   const careTasks = schedule.filter(task => CARE_STAGES.has(task.stageKey));
-  let completedSet: Set<string> = new Set();
-  try {
-    const saved = localStorage.getItem(getTasksKey(crop.id));
-    if (saved) completedSet = new Set(JSON.parse(saved));
-  } catch {
-    // Ignore malformed task history and evaluate alerts from current schedule only.
+  let completedSet: Set<string> = completedSetFromServer || new Set();
+  if (!completedSetFromServer) {
+    try {
+      const saved = localStorage.getItem(getTasksKey(crop.id));
+      if (saved) completedSet = new Set(JSON.parse(saved));
+    } catch {
+      // Ignore malformed task history and evaluate alerts from current schedule only.
+    }
   }
 
   const getTaskId = (task: DailyTask) => `${task.taskKey}_${task.dayStart}`;
@@ -90,6 +101,61 @@ const getAlerts = (crop: CropEntry, t: (key: string) => string): { text: string;
 const MyCropsHub = ({ crops, activeCropId, onSelectCrop, onAddNew, onRemoveCrop }: MyCropsHubProps) => {
   const { t } = useLanguage();
   const [filter, setFilter] = useState<CropFilter>("all");
+  const [completedTaskMap, setCompletedTaskMap] = useState<CompletedTaskMap>({});
+  const [isSyncFallback, setIsSyncFallback] = useState(false);
+
+  useEffect(() => {
+    let cancelled = false;
+
+    const loadCompletedTasks = async () => {
+      if (crops.length === 0) {
+        if (!cancelled) setCompletedTaskMap({});
+        return;
+      }
+
+      let usedFallback = false;
+
+      const entries = await Promise.all(
+        crops.map(async (crop): Promise<[string, Set<string>]> => {
+          if (crop._dbId) {
+            try {
+              const tasks = await apiClient.getCropTasks(crop._dbId);
+              const completed = new Set(
+                tasks
+                  .filter(task => task.completed)
+                  .map(task => `${task.task_key}_${task.day_start}`),
+              );
+              return [crop.id, completed];
+            } catch {
+              usedFallback = true;
+              // Fall through to local cache for this crop when API is unavailable.
+            }
+          }
+
+          try {
+            const raw = localStorage.getItem(getTasksKey(crop.id));
+            if (!raw) return [crop.id, new Set<string>()];
+            const parsed = JSON.parse(raw);
+            if (!Array.isArray(parsed)) return [crop.id, new Set<string>()];
+            return [crop.id, new Set(parsed.filter((item): item is string => typeof item === "string"))];
+          } catch {
+            return [crop.id, new Set<string>()];
+          }
+        }),
+      );
+
+      if (!cancelled) {
+        setCompletedTaskMap(Object.fromEntries(entries));
+        setIsSyncFallback(usedFallback);
+      }
+    };
+
+    void loadCompletedTasks();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [crops]);
 
   const stats = useMemo(() => {
     let growing = 0, ready = 0;
@@ -125,10 +191,17 @@ const MyCropsHub = ({ crops, activeCropId, onSelectCrop, onAddNew, onRemoveCrop 
       {/* Header */}
       <div className="flex items-center justify-between mb-4">
         <h2 className="text-xl font-bold text-foreground">{t("my_crops_title")}</h2>
-        <Button onClick={onAddNew} size="sm">
-          <Plus size={14} className="mr-1.5" />
-          {t("my_crops_add_new")}
-        </Button>
+        <div className="flex items-center gap-2">
+          {isSyncFallback && (
+            <Badge variant="outline" className="text-[11px] text-amber-700 border-amber-300 bg-amber-50 dark:bg-amber-900/20">
+              Using local fallback
+            </Badge>
+          )}
+          <Button onClick={onAddNew} size="sm">
+            <Plus size={14} className="mr-1.5" />
+            {t("my_crops_add_new")}
+          </Button>
+        </div>
       </div>
 
       {/* Summary */}
@@ -178,7 +251,11 @@ const MyCropsHub = ({ crops, activeCropId, onSelectCrop, onAddNew, onRemoveCrop 
             const days = getDaysSince(crop.startDate);
             const duration = CROP_DURATIONS[crop.selectedCrop] || 120;
             const isReady = crop.startDate && days >= duration;
-            const alerts = getAlerts(crop, t);
+            const alerts = getAlerts(crop, t, completedTaskMap[crop.id]);
+            const healthHistory = readCropHealthHistory(crop.id);
+            const latestHealth = healthHistory.length > 0 ? healthHistory[healthHistory.length - 1] : null;
+            const previousHealth = healthHistory.length > 1 ? healthHistory[healthHistory.length - 2] : null;
+            const healthDelta = latestHealth && previousHealth ? latestHealth.score - previousHealth.score : null;
 
             return (
               <div
@@ -231,6 +308,29 @@ const MyCropsHub = ({ crops, activeCropId, onSelectCrop, onAddNew, onRemoveCrop 
                     <span>{new Date(crop.startDate).toLocaleDateString()}</span>
                     <span className="mx-1">•</span>
                     <span>{t("my_crops_day")} {days}</span>
+                  </div>
+                )}
+
+                {latestHealth && (
+                  <div className="rounded-lg border border-border bg-muted/30 p-2.5 mb-2">
+                    <div className="flex items-center justify-between gap-2 mb-1">
+                      <div className="flex items-center gap-1.5 text-xs font-medium text-foreground">
+                        <Activity size={12} className="text-primary" />
+                        Crop Health
+                      </div>
+                      <span className="text-xs font-semibold text-foreground">{latestHealth.score}/100</span>
+                    </div>
+                    <div className="h-1.5 w-full rounded-full bg-muted overflow-hidden">
+                      <div
+                        className={`h-full ${latestHealth.status === "good" ? "bg-emerald-500" : latestHealth.status === "moderate" ? "bg-amber-500" : "bg-destructive"}`}
+                        style={{ width: `${latestHealth.score}%` }}
+                      />
+                    </div>
+                    {healthDelta !== null && (
+                      <p className={`mt-1 text-[11px] ${Math.abs(healthDelta) < 2 ? "text-muted-foreground" : healthDelta > 0 ? "text-emerald-600" : "text-destructive"}`}>
+                        {Math.abs(healthDelta) < 2 ? "Stable since last check" : `${healthDelta > 0 ? "+" : ""}${healthDelta} since last check`}
+                      </p>
+                    )}
                   </div>
                 )}
 
