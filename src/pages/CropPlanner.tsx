@@ -298,13 +298,14 @@ const CropPlanner = () => {
   );
 
   // Hub handlers
-  const handleSelectCrop = useCallback((id: string) => {
+  const handleSelectCrop = useCallback(async (id: string) => {
     const crop = allCrops.find(c => c.id === id);
     if (!crop) return;
     setActiveCropId(id);
     loadCropIntoState(crop);
+    await syncCompletedTasksFromBackend(crop);
     setView("detail");
-  }, [allCrops, loadCropIntoState]);
+  }, [allCrops, loadCropIntoState, syncCompletedTasksFromBackend]);
 
   const handleAddNewCrop = useCallback(() => {
     setActiveCropId(null);

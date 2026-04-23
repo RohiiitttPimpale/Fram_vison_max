@@ -12,6 +12,7 @@ import { Progress } from "@/components/ui/progress";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Alert, AlertTitle, AlertDescription } from "@/components/ui/alert";
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Droplets, Leaf, Bug, BarChart3, Star, CalendarDays, Activity, AlertTriangle, CheckCircle2, Clock, TrendingUp, Bell, Upload, X } from "lucide-react";
 import SmartTips from "./SmartTips";
 
@@ -89,7 +90,7 @@ const CropCareDashboard = ({
   const [scanResult, setScanResult] = useState<PlannerDiseaseResult | null>(null);
   const [scanLoading, setScanLoading] = useState(false);
   const [scanError, setScanError] = useState<string | null>(null);
-  const photoUploadCardRef = useRef<HTMLDivElement | null>(null);
+  const [scanDialogOpen, setScanDialogOpen] = useState(false);
   const latestContextHashRef = useRef<string | null>(null);
 
   const effectiveWeather = useMemo(() => weatherData || simulateWeather(), [weatherData]);
@@ -118,8 +119,8 @@ const CropCareDashboard = ({
     setScanResult(null);
   }, []);
 
-  const focusPhotoUpload = useCallback(() => {
-    photoUploadCardRef.current?.scrollIntoView({ behavior: "smooth", block: "center" });
+  const openScanDialog = useCallback(() => {
+    setScanDialogOpen(true);
   }, []);
 
   const runDiseaseScan = useCallback(async () => {
@@ -586,52 +587,27 @@ const CropCareDashboard = ({
         animate={{ opacity: 1, y: 0 }}
         transition={{ delay: 0.025 }}
         className="agri-card border-2 border-primary/20"
-        ref={photoUploadCardRef}
       >
         <div className="flex items-center justify-between gap-2 mb-3">
           <div>
             <h3 className="font-semibold text-foreground">{t("disease_detection")}</h3>
-            <p className="text-xs text-muted-foreground">Upload crop image here to improve health score accuracy.</p>
+            <p className="text-xs text-muted-foreground">Tap scan to upload crop image and improve health score accuracy.</p>
           </div>
-          {diseaseSignal && (
-            <Badge variant="outline" className="text-[11px]">
-              {t("severity")}: {t(diseaseSignal.severity)}
-            </Badge>
-          )}
+          <div className="flex items-center gap-2">
+            {diseaseSignal && (
+              <Badge variant="outline" className="text-[11px]">
+                {t("severity")}: {t(diseaseSignal.severity)}
+              </Badge>
+            )}
+            <Button size="sm" onClick={openScanDialog}>
+              <Upload size={14} className="mr-1.5" />
+              Scan Photo
+            </Button>
+          </div>
         </div>
 
-        {!scanImagePreview ? (
-          <label className="flex cursor-pointer flex-col items-center justify-center rounded-xl border-2 border-dashed border-border bg-muted/20 px-4 py-8 text-center hover:border-primary/40">
-            <Upload size={20} className="mb-2 text-primary" />
-            <p className="text-sm font-medium text-foreground">{t("upload_leaf")}</p>
-            <p className="text-xs text-muted-foreground mt-1">PNG, JPG, JPEG</p>
-            <input type="file" accept="image/*" className="hidden" onChange={handleSelectScanImage} />
-          </label>
-        ) : (
-          <div className="space-y-3">
-            <img src={scanImagePreview} alt={t("upload_leaf")} className="h-48 w-full rounded-xl object-cover" />
-            <div className="flex items-center gap-2">
-              <Button size="sm" onClick={() => void runDiseaseScan()} disabled={scanLoading}>
-                <Upload size={14} className="mr-1.5" />
-                {scanLoading ? t("analyzing") : t("detect_disease")}
-              </Button>
-              <Button type="button" size="sm" variant="outline" onClick={clearScanImage}>
-                <X size={14} className="mr-1.5" />
-                {t("reset")}
-              </Button>
-            </div>
-          </div>
-        )}
-
-        {scanError && (
-          <Alert variant="destructive" className="mt-3">
-            <AlertTriangle size={14} />
-            <AlertDescription className="text-xs">{scanError}</AlertDescription>
-          </Alert>
-        )}
-
         {scanResult && (
-          <div className="mt-3 rounded-lg border border-border bg-muted/20 p-3 text-sm">
+          <div className="rounded-lg border border-border bg-muted/20 p-3 text-sm">
             <p className="font-medium text-foreground">{scanResult.disease}</p>
             <p className="text-xs text-muted-foreground mt-1">
               {t("confidence")}: {scanResult.confidence}% · {t("severity")}: {t(scanResult.severity)}
@@ -641,7 +617,62 @@ const CropCareDashboard = ({
             </p>
           </div>
         )}
+
+        {!scanResult && (
+          <p className="text-xs text-muted-foreground">No recent scan yet. Use Scan Photo to add disease signal to health tracking.</p>
+        )}
       </motion.div>
+
+      <Dialog
+        open={scanDialogOpen}
+        onOpenChange={(open) => {
+          setScanDialogOpen(open);
+          if (!open) {
+            setScanError(null);
+          }
+        }}
+      >
+        <DialogContent className="sm:max-w-2xl">
+          <DialogHeader>
+            <DialogTitle>{t("disease_detection")}</DialogTitle>
+            <DialogDescription>Upload crop image and run disease detection.</DialogDescription>
+          </DialogHeader>
+
+          {!scanImagePreview ? (
+            <label className="flex cursor-pointer flex-col items-center justify-center rounded-xl border-2 border-dashed border-border bg-muted/20 px-4 py-8 text-center hover:border-primary/40">
+              <Upload size={20} className="mb-2 text-primary" />
+              <p className="text-sm font-medium text-foreground">{t("upload_leaf")}</p>
+              <p className="text-xs text-muted-foreground mt-1">PNG, JPG, JPEG</p>
+              <input type="file" accept="image/*" className="hidden" onChange={handleSelectScanImage} />
+            </label>
+          ) : (
+            <div className="space-y-3">
+              <img src={scanImagePreview} alt={t("upload_leaf")} className="h-52 w-full rounded-xl object-cover" />
+              <div className="flex items-center gap-2">
+                <Button
+                  size="sm"
+                  onClick={() => void runDiseaseScan()}
+                  disabled={scanLoading}
+                >
+                  <Upload size={14} className="mr-1.5" />
+                  {scanLoading ? t("analyzing") : t("detect_disease")}
+                </Button>
+                <Button type="button" size="sm" variant="outline" onClick={clearScanImage}>
+                  <X size={14} className="mr-1.5" />
+                  {t("reset")}
+                </Button>
+              </div>
+            </div>
+          )}
+
+          {scanError && (
+            <Alert variant="destructive">
+              <AlertTriangle size={14} />
+              <AlertDescription className="text-xs">{scanError}</AlertDescription>
+            </Alert>
+          )}
+        </DialogContent>
+      </Dialog>
 
       <motion.div
         initial={{ opacity: 0, y: -10 }}
@@ -660,7 +691,7 @@ const CropCareDashboard = ({
         </div>
         {photoTaskStatus.kind !== "completed" && (
           <div className="mt-3">
-            <Button size="sm" onClick={focusPhotoUpload}>
+            <Button size="sm" onClick={openScanDialog}>
               <Upload size={14} className="mr-1.5" />
               Take Photo Now
             </Button>
