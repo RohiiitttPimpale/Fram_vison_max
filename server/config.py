@@ -1,5 +1,10 @@
 import os
 from datetime import timedelta
+from pathlib import Path
+
+
+BASE_DIR = Path(__file__).resolve().parent.parent
+DATABASE_PATH = BASE_DIR / "instance" / "soil_smart_pilot.db"
 
 class Config:
     """Base configuration."""
@@ -20,7 +25,7 @@ class DevelopmentConfig(Config):
     DEBUG = True
     SQLALCHEMY_DATABASE_URI = os.environ.get(
         "DATABASE_URL",
-        "sqlite:///soil_smart_pilot.db"
+        f"sqlite:///{DATABASE_PATH.as_posix()}"
     )
 
 

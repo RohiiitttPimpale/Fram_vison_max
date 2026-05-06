@@ -10,7 +10,7 @@ import { toast } from "sonner";
 import LanguageSelector from "@/components/LanguageSelector";
 
 const Login = () => {
-  const [email, setEmail] = useState("");
+  const [identifier, setIdentifier] = useState("");
   const [password, setPassword] = useState("");
   const { login, error } = useAuth();
   const { t } = useLanguage();
@@ -18,7 +18,7 @@ const Login = () => {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    const success = await login(email, password);
+    const success = await login(identifier, password);
     if (success) {
       toast.success(t("welcome_back"));
       navigate("/");
@@ -45,8 +45,8 @@ const Login = () => {
 
         <form onSubmit={handleSubmit} className="space-y-4">
           <div className="space-y-2">
-            <Label htmlFor="email">{t("email")}</Label>
-            <Input id="email" type="email" value={email} onChange={e => setEmail(e.target.value)} placeholder="farmer@example.com" required />
+            <Label htmlFor="identifier">Email or Phone Number</Label>
+            <Input id="identifier" value={identifier} onChange={e => setIdentifier(e.target.value)} placeholder="farmer@example.com or +91 9876543210" required />
           </div>
           <div className="space-y-2">
             <Label htmlFor="password">{t("password")}</Label>

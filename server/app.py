@@ -5,6 +5,7 @@ from flask import Flask
 from flask_cors import CORS
 from flask_jwt_extended import JWTManager
 from dotenv import load_dotenv
+from sqlalchemy import inspect, text
 
 from config import config
 from models import db
@@ -73,6 +74,49 @@ def create_app(config_name=None):
     # Create tables
     with app.app_context():
         db.create_all()
+
+        inspector = inspect(db.engine)
+        if inspector.has_table("marketplace_listings"):
+            columns = {column["name"] for column in inspector.get_columns("marketplace_listings")}
+            if "image_url" not in columns:
+                with db.engine.begin() as connection:
+                    connection.execute(text("ALTER TABLE marketplace_listings ADD COLUMN image_url VARCHAR(1000)"))
+
+        if inspector.has_table("users"):
+            user_columns = {column["name"] for column in inspector.get_columns("users")}
+            with db.engine.begin() as connection:
+                if "username" not in user_columns:
+                    connection.execute(text("ALTER TABLE users ADD COLUMN username VARCHAR(100)"))
+                    # Generate unique usernames for existing users
+                    result = connection.execute(text("SELECT id FROM users WHERE username IS NULL"))
+                    for row in result:
+                        user_id = row[0]
+                        connection.execute(text(f"UPDATE users SET username = 'user_{user_id}' WHERE id = {user_id}"))
+                if "seller_phone" not in user_columns:
+                    connection.execute(text("ALTER TABLE users ADD COLUMN seller_phone VARCHAR(30)"))
+                duplicate_phones = connection.execute(
+                    text(
+                        "SELECT seller_phone FROM users WHERE seller_phone IS NOT NULL AND seller_phone <> '' "
+                        "GROUP BY seller_phone HAVING COUNT(*) > 1"
+                    )
+                ).fetchall()
+                for (phone_value,) in duplicate_phones:
+                    duplicate_ids = connection.execute(
+                        text(
+                            "SELECT id FROM users WHERE seller_phone = :phone ORDER BY id ASC"
+                        ),
+                        {"phone": phone_value},
+                    ).fetchall()
+                    for duplicate_id in duplicate_ids[1:]:
+                        connection.execute(
+                            text("UPDATE users SET seller_phone = NULL WHERE id = :user_id"),
+                            {"user_id": duplicate_id[0]},
+                        )
+                connection.execute(text("CREATE UNIQUE INDEX IF NOT EXISTS ix_users_seller_phone ON users (seller_phone)"))
+                if "latitude" not in user_columns:
+                    connection.execute(text("ALTER TABLE users ADD COLUMN latitude FLOAT"))
+                if "longitude" not in user_columns:
+                    connection.execute(text("ALTER TABLE users ADD COLUMN longitude FLOAT"))
     
     # Health check endpoint
     @app.route("/api/health", methods=["GET"])

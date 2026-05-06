@@ -75,7 +75,7 @@ const App = () => (
               <Route path="/news" element={<ProtectedRoute><News /></ProtectedRoute>} />
               <Route path="/marketplace" element={<Navigate to="/marketplace/buy" replace />} />
               <Route path="/marketplace/:section" element={<ProtectedRoute><Marketplace /></ProtectedRoute>} />
-              <Route path="/my-listings" element={<Navigate to="/marketplace/trading" replace />} />
+              <Route path="/my-listings" element={<Navigate to="/marketplace/sell" replace />} />
               <Route path="/marketplace/moderation" element={<ProtectedRoute><MarketplaceModeration /></ProtectedRoute>} />
               <Route path="/marketplace/policy" element={<ProtectedRoute><MarketplacePolicy /></ProtectedRoute>} />
               <Route path="/marketplace/terms" element={<ProtectedRoute><MarketplaceTerms /></ProtectedRoute>} />

@@ -1,6 +1,7 @@
 from datetime import datetime
 from flask_sqlalchemy import SQLAlchemy
 from werkzeug.security import generate_password_hash, check_password_hash
+from datetime import timedelta
 
 db = SQLAlchemy()
 
@@ -11,27 +12,29 @@ class User(db.Model):
     
     id = db.Column(db.Integer, primary_key=True)
     email = db.Column(db.String(255), unique=True, nullable=False, index=True)
+    username = db.Column(db.String(100), unique=True, nullable=False, index=True)
     password_hash = db.Column(db.String(255), nullable=False)
     name = db.Column(db.String(255), nullable=False)
     location = db.Column(db.String(255))
-    farm_size = db.Column(db.String(100))
-    preferred_crop = db.Column(db.String(100))
+    latitude = db.Column(db.Float)
+    longitude = db.Column(db.Float)
+    seller_phone = db.Column(db.String(30), unique=True, index=True)
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
     
     # Relationships
     crops = db.relationship("Crop", back_populates="user", cascade="all, delete-orphan")
     marketplace_listings = db.relationship("MarketplaceListing", back_populates="seller", cascade="all, delete-orphan")
-    sent_marketplace_inquiries = db.relationship(
-        "MarketplaceInquiry",
-        foreign_keys="MarketplaceInquiry.buyer_id",
+    marketplace_orders_as_buyer = db.relationship(
+        "MarketplaceOrder",
         back_populates="buyer",
+        foreign_keys="MarketplaceOrder.buyer_id",
         cascade="all, delete-orphan",
     )
-    received_marketplace_inquiries = db.relationship(
-        "MarketplaceInquiry",
-        foreign_keys="MarketplaceInquiry.seller_id",
+    marketplace_orders_as_seller = db.relationship(
+        "MarketplaceOrder",
         back_populates="seller",
+        foreign_keys="MarketplaceOrder.seller_id",
         cascade="all, delete-orphan",
     )
     
@@ -48,10 +51,12 @@ class User(db.Model):
         return {
             "id": self.id,
             "email": self.email,
+            "username": self.username,
             "name": self.name,
             "location": self.location,
-            "farm_size": self.farm_size,
-            "preferred_crop": self.preferred_crop,
+            "latitude": self.latitude,
+            "longitude": self.longitude,
+            "seller_phone": self.seller_phone,
         }
 
 
@@ -163,24 +168,13 @@ class MarketplaceListing(db.Model):
     price_per_unit = db.Column(db.Float, nullable=False)
     location = db.Column(db.String(255), index=True)
     description = db.Column(db.Text)
-    status = db.Column(db.String(20), default="pending", index=True)  # pending | active | sold | blocked | rejected
+    image_url = db.Column(db.String(1000))  # Single image URL
+    status = db.Column(db.String(20), default="active", index=True)  # active | reserved | sold
     created_at = db.Column(db.DateTime, default=datetime.utcnow, index=True)
     updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
 
     seller = db.relationship("User", back_populates="marketplace_listings")
-    inquiries = db.relationship("MarketplaceInquiry", back_populates="listing", cascade="all, delete-orphan")
-    images = db.relationship(
-        "MarketplaceListingImage",
-        back_populates="listing",
-        cascade="all, delete-orphan",
-        order_by="MarketplaceListingImage.id.asc()",
-    )
-    moderation_actions = db.relationship(
-        "MarketplaceModerationAction",
-        back_populates="listing",
-        cascade="all, delete-orphan",
-        order_by="MarketplaceModerationAction.id.desc()",
-    )
+    orders = db.relationship("MarketplaceOrder", back_populates="listing", cascade="all, delete-orphan")
 
     def to_dict(self):
         """Convert listing to dictionary."""
@@ -195,52 +189,34 @@ class MarketplaceListing(db.Model):
             "price_per_unit": self.price_per_unit,
             "location": self.location,
             "description": self.description,
+            "image_url": self.image_url,
             "status": self.status,
-            "images": [image.to_dict() for image in self.images],
-            "primary_image_url": self.images[0].image_url if self.images else None,
             "created_at": self.created_at.isoformat() if self.created_at else None,
         }
 
 
-class MarketplaceListingImage(db.Model):
-    """Image references for a marketplace listing."""
-    __tablename__ = "marketplace_listing_images"
-
-    id = db.Column(db.Integer, primary_key=True)
-    listing_id = db.Column(db.Integer, db.ForeignKey("marketplace_listings.id"), nullable=False, index=True)
-    image_url = db.Column(db.String(1000), nullable=False)
-    created_at = db.Column(db.DateTime, default=datetime.utcnow)
-
-    listing = db.relationship("MarketplaceListing", back_populates="images")
-
-    def to_dict(self):
-        """Convert listing image to dictionary."""
-        return {
-            "id": self.id,
-            "listing_id": self.listing_id,
-            "image_url": self.image_url,
-        }
-
-
-class MarketplaceInquiry(db.Model):
-    """Buyer inquiry on a marketplace listing."""
-    __tablename__ = "marketplace_inquiries"
+class MarketplaceOrder(db.Model):
+    """Order created when a buyer purchases a marketplace listing."""
+    __tablename__ = "marketplace_orders"
 
     id = db.Column(db.Integer, primary_key=True)
     listing_id = db.Column(db.Integer, db.ForeignKey("marketplace_listings.id"), nullable=False, index=True)
     buyer_id = db.Column(db.Integer, db.ForeignKey("users.id"), nullable=False, index=True)
     seller_id = db.Column(db.Integer, db.ForeignKey("users.id"), nullable=False, index=True)
-    message = db.Column(db.Text, nullable=False)
-    status = db.Column(db.String(20), default="open", index=True)  # open | responded | closed
+    quantity = db.Column(db.Float, nullable=False)
+    unit = db.Column(db.String(50), nullable=False)
+    price_per_unit = db.Column(db.Float, nullable=False)
+    total_price = db.Column(db.Float, nullable=False)
+    settlement_mode = db.Column(db.String(30), default="cash_offline")
+    status = db.Column(db.String(30), default="pending_confirmation", index=True)
     created_at = db.Column(db.DateTime, default=datetime.utcnow, index=True)
     updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
 
-    listing = db.relationship("MarketplaceListing", back_populates="inquiries")
-    buyer = db.relationship("User", foreign_keys=[buyer_id], back_populates="sent_marketplace_inquiries")
-    seller = db.relationship("User", foreign_keys=[seller_id], back_populates="received_marketplace_inquiries")
+    listing = db.relationship("MarketplaceListing", back_populates="orders")
+    buyer = db.relationship("User", back_populates="marketplace_orders_as_buyer", foreign_keys=[buyer_id])
+    seller = db.relationship("User", back_populates="marketplace_orders_as_seller", foreign_keys=[seller_id])
 
     def to_dict(self):
-        """Convert inquiry to dictionary."""
         return {
             "id": self.id,
             "listing_id": self.listing_id,
@@ -249,33 +225,21 @@ class MarketplaceInquiry(db.Model):
             "buyer_name": self.buyer.name if self.buyer else None,
             "seller_id": self.seller_id,
             "seller_name": self.seller.name if self.seller else None,
-            "message": self.message,
+            "quantity": self.quantity,
+            "unit": self.unit,
+            "price_per_unit": self.price_per_unit,
+            "total_price": self.total_price,
+            "settlement_mode": self.settlement_mode,
             "status": self.status,
             "created_at": self.created_at.isoformat() if self.created_at else None,
             "updated_at": self.updated_at.isoformat() if self.updated_at else None,
         }
 
 
-class MarketplaceModerationAction(db.Model):
-    """Admin moderation actions captured for marketplace listings."""
-    __tablename__ = "marketplace_moderation_actions"
 
-    id = db.Column(db.Integer, primary_key=True)
-    listing_id = db.Column(db.Integer, db.ForeignKey("marketplace_listings.id"), nullable=False, index=True)
-    admin_user_id = db.Column(db.Integer, db.ForeignKey("users.id"), nullable=False, index=True)
-    action = db.Column(db.String(20), nullable=False, index=True)  # approve | block | reject
-    reason = db.Column(db.Text)
-    created_at = db.Column(db.DateTime, default=datetime.utcnow, index=True)
 
-    listing = db.relationship("MarketplaceListing", back_populates="moderation_actions")
 
-    def to_dict(self):
-        """Convert moderation action to dictionary."""
-        return {
-            "id": self.id,
-            "listing_id": self.listing_id,
-            "admin_user_id": self.admin_user_id,
-            "action": self.action,
-            "reason": self.reason,
-            "created_at": self.created_at.isoformat() if self.created_at else None,
-        }
+
+
+
+

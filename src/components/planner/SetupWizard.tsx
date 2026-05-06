@@ -5,7 +5,7 @@ import { DailyTask } from "@/lib/crop-schedules";
 import { SoilData } from "@/lib/soil-recommendations";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Progress } from "@/components/ui/progress";
-import { CheckCircle2, Shovel, Sprout, Layers } from "lucide-react";
+import { CheckCircle2, Shovel, Sprout, Layers, AlertCircle } from "lucide-react";
 
 interface SetupWizardProps {
   schedule: DailyTask[];
@@ -50,12 +50,41 @@ const SetupWizard = ({ schedule, startDate, completedTasks, getTaskId, toggleTas
     return d.toLocaleDateString();
   };
 
+  const getDateRange = (stageKey: string) => {
+    const stageTasks = schedule.filter(task => task.stageKey === stageKey);
+    if (stageTasks.length === 0) return null;
+    
+    const minDay = Math.min(...stageTasks.map(t => t.dayStart));
+    const maxDay = Math.max(...stageTasks.map(t => t.dayEnd));
+    
+    return {
+      startDate: formatDate(minDay),
+      endDate: formatDate(maxDay),
+      startOffset: minDay,
+      endOffset: maxDay
+    };
+  };
+
   return (
     <motion.div
       initial={{ opacity: 0, y: 10 }}
       animate={{ opacity: 1, y: 0 }}
       className="space-y-6"
     >
+      {/* Info banner */}
+      <div className="agri-card bg-blue-50 dark:bg-blue-950/30 border border-blue-200 dark:border-blue-800">
+        <div className="flex gap-3">
+          <AlertCircle size={18} className="text-blue-600 dark:text-blue-400 flex-shrink-0 mt-0.5" />
+          <div>
+            <h3 className="font-semibold text-blue-900 dark:text-blue-200 text-sm">Plantation Date Timeline</h3>
+            <p className="text-xs text-blue-800 dark:text-blue-300 mt-1">
+              Plantation date is set to <span className="font-medium">{formatDate(0)}</span>. 
+              Complete all land preparation tasks before this date, then proceed with sowing/transplanting.
+            </p>
+          </div>
+        </div>
+      </div>
+
       {/* Soil Data Summary */}
       {soilData && (
         <div className="agri-card bg-muted/30 border border-border">
@@ -119,6 +148,7 @@ const SetupWizard = ({ schedule, startDate, completedTasks, getTaskId, toggleTas
         const isLocked = stageIdx > currentStep;
         const isActive = stageIdx === currentStep;
         const progress = info.total > 0 ? Math.round((info.done / info.total) * 100) : 0;
+        const dateRange = getDateRange(stageKey);
 
         return (
           <motion.div
@@ -136,6 +166,14 @@ const SetupWizard = ({ schedule, startDate, completedTasks, getTaskId, toggleTas
                   {info.complete && <CheckCircle2 size={18} className="text-primary" />}
                 </div>
                 <p className="text-xs text-muted-foreground">{t(`${stageKey}_desc`)}</p>
+                {dateRange && (
+                  <p className="text-xs font-medium text-primary mt-1">
+                    {dateRange.startDate === dateRange.endDate 
+                      ? `Date: ${dateRange.startDate}`
+                      : `${dateRange.startDate} – ${dateRange.endDate}`
+                    }
+                  </p>
+                )}
               </div>
             </div>
 

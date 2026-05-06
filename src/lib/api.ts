@@ -135,10 +135,12 @@ class ApiClient {
   async signup(data: {
     email: string;
     password: string;
+    username: string;
     name: string;
+    phone: string;
     location?: string;
-    farm_size?: string;
-    preferred_crop?: string;
+    latitude?: number;
+    longitude?: number;
   }): Promise<{ user: UserProfile; access_token: string }> {
     return this.request(
       "/auth/signup",
@@ -149,10 +151,10 @@ class ApiClient {
   }
 
   /**
-   * Login user
+   * Login user with email or phone
    */
-  async login(email: string, password: string): Promise<{ user: UserProfile; access_token: string }> {
-    return this.request("/auth/login", "POST", { email, password }, false);
+  async login(identifier: string, password: string): Promise<{ user: UserProfile; access_token: string }> {
+    return this.request("/auth/login", "POST", { identifier, password }, false);
   }
 
   /**
@@ -168,6 +170,12 @@ class ApiClient {
   async updateProfile(data: Partial<UserProfile>): Promise<UserProfile> {
     return this.request("/auth/profile", "PUT", data);
   }
+
+  async requestSellerVerification(seller_phone: string): Promise<UserProfile> {
+    return this.request("/auth/seller-verification/request", "POST", { seller_phone });
+  }
+
+
 
   // ===== CROP ENDPOINTS =====
 
@@ -339,7 +347,7 @@ class ApiClient {
   }
 
   async markMarketplaceListingSold(listingId: number): Promise<MarketplaceListing> {
-    return this.request(`/marketplace/listings/${listingId}/mark-sold`, "POST", {});
+    return this.request(`/marketplace/listings/${listingId}`, "PUT", { status: "sold" });
   }
 
   async updateMarketplaceListing(listingId: number, payload: UpdateMarketplaceListingPayload): Promise<MarketplaceListing> {
@@ -348,6 +356,18 @@ class ApiClient {
 
   async deleteMarketplaceListing(listingId: number): Promise<void> {
     return this.request(`/marketplace/listings/${listingId}`, "DELETE");
+  }
+
+  async buyMarketplaceListing(listingId: number): Promise<MarketplaceOrder> {
+    return this.request(`/marketplace/listings/${listingId}/buy`, "POST", {});
+  }
+
+  async getMyMarketplaceOrders(): Promise<MarketplaceMyOrdersResponse> {
+    return this.request("/marketplace/orders/mine", "GET");
+  }
+
+  async updateMarketplaceOrderStatus(orderId: number, status: MarketplaceOrderStatus): Promise<MarketplaceOrder> {
+    return this.request(`/marketplace/orders/${orderId}/status`, "PATCH", { status });
   }
 
   async uploadMarketplaceImage(file: File): Promise<{ image_url: string }> {
@@ -387,10 +407,14 @@ class ApiClient {
 export interface UserProfile {
   id?: number;
   email: string;
+  username: string;
   name: string;
   location?: string;
-  farm_size?: string;
-  preferred_crop?: string;
+  latitude?: number;
+  longitude?: number;
+  seller_phone?: string;
+  seller_verification_status?: "unverified" | "pending" | "verified" | "rejected";
+  seller_verified_at?: string;
 }
 
 export interface Crop {
@@ -551,12 +575,13 @@ export interface MarketplaceListing {
   location?: string;
   description?: string;
   status: MarketplaceListingStatus;
+  image_url?: string;
   images?: MarketplaceListingImage[];
   primary_image_url?: string;
   created_at?: string;
 }
 
-export type MarketplaceListingStatus = "pending" | "active" | "sold" | "blocked" | "rejected";
+export type MarketplaceListingStatus = "pending" | "active" | "reserved" | "sold" | "blocked" | "rejected";
 
 export interface MarketplaceListingImage {
   id: number;
@@ -572,6 +597,31 @@ export interface MarketplaceListingsResponse {
   has_more: boolean;
 }
 
+export interface MarketplaceOrder {
+  id: number;
+  listing_id: number;
+  listing_title?: string;
+  buyer_id: number;
+  buyer_name?: string;
+  seller_id: number;
+  seller_name?: string;
+  quantity: number;
+  unit: string;
+  price_per_unit: number;
+  total_price: number;
+  settlement_mode: string;
+  status: MarketplaceOrderStatus;
+  created_at?: string;
+  updated_at?: string;
+}
+
+export type MarketplaceOrderStatus = "pending_confirmation" | "confirmed" | "cancelled" | "completed";
+
+export interface MarketplaceMyOrdersResponse {
+  as_buyer: MarketplaceOrder[];
+  as_seller: MarketplaceOrder[];
+}
+
 export interface CreateMarketplaceListingPayload {
   title: string;
   kind: "crop" | "seed";
@@ -580,8 +630,7 @@ export interface CreateMarketplaceListingPayload {
   price_per_unit: number;
   location?: string;
   description?: string;
-  image_urls?: string[];
-  accepted_policy: boolean;
+  image_url?: string;
 }
 
 export type UpdateMarketplaceListingPayload = Partial<CreateMarketplaceListingPayload>;

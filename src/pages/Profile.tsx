@@ -7,17 +7,32 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { toast } from "sonner";
 import { User } from "lucide-react";
+import { MapLocationPicker } from "@/components/ui/map-location-picker";
 
 const Profile = () => {
   const { user, updateProfile } = useAuth();
   const { t } = useLanguage();
-  const [isLocating, setIsLocating] = useState(false);
   const [form, setForm] = useState({
     name: user?.name || "",
     email: user?.email || "",
+    username: user?.username || "",
+    seller_phone: user?.seller_phone || "",
     location: user?.location || "",
-    farm_size: user?.farm_size || "",
+    lat: user?.latitude || 20.5937,
+    lng: user?.longitude || 78.9629,
   });
+
+  useEffect(() => {
+    setForm({
+      name: user?.name || "",
+      email: user?.email || "",
+      username: user?.username || "",
+      seller_phone: user?.seller_phone || "",
+      location: user?.location || "",
+      lat: user?.latitude || 20.5937,
+      lng: user?.longitude || 78.9629,
+    });
+  }, [user]);
 
   useEffect(() => {
     if (form.location) return;
@@ -34,26 +49,15 @@ const Profile = () => {
     void prefillLocation();
   }, [form.location]);
 
-  const handleExtractLocation = async () => {
-    try {
-      setIsLocating(true);
-      const location = await extractLocation();
-      setForm(prev => ({ ...prev, location }));
-      toast.success("Location detected");
-    } catch (err) {
-      const message = err instanceof Error ? err.message : "Unable to detect location";
-      toast.error(message);
-    } finally {
-      setIsLocating(false);
-    }
-  };
-
   const handleSave = async (e: React.FormEvent) => {
     e.preventDefault();
     const success = await updateProfile({
       name: form.name,
+      username: form.username,
       location: form.location,
-      farm_size: form.farm_size,
+      latitude: form.lat,
+      longitude: form.lng,
+      seller_phone: form.seller_phone,
     });
 
     if (success) {
@@ -75,6 +79,7 @@ const Profile = () => {
             <div>
               <p className="font-semibold text-foreground text-lg">{form.name || t("farmer")}</p>
               <p className="text-sm text-muted-foreground">{form.email}</p>
+              <p className="text-sm text-muted-foreground">@{form.username || "user"}</p>
             </div>
           </div>
 
@@ -85,22 +90,30 @@ const Profile = () => {
                 <Input value={form.name} onChange={e => setForm(f => ({ ...f, name: e.target.value }))} />
               </div>
               <div className="space-y-2">
-                <Label>{t("email")}</Label>
-                <Input type="email" value={form.email} disabled className="opacity-60" />
+                <Label>Username</Label>
+                <Input value={form.username} onChange={e => setForm(f => ({ ...f, username: e.target.value }))} />
               </div>
             </div>
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
-                <Label>{t("location")}</Label>
-                <Input value={form.location} onChange={e => setForm(f => ({ ...f, location: e.target.value }))} />
-                <Button type="button" variant="outline" size="sm" onClick={handleExtractLocation} disabled={isLocating}>
-                  {isLocating ? "Detecting..." : "Use current location"}
-                </Button>
+                <Label>{t("email")}</Label>
+                <Input type="email" value={form.email} disabled className="opacity-60" />
               </div>
               <div className="space-y-2">
-                <Label>{t("farm_size")}</Label>
-                <Input value={form.farm_size} onChange={e => setForm(f => ({ ...f, farm_size: e.target.value }))} />
+                <Label>Phone Number</Label>
+                <Input value={form.seller_phone} onChange={e => setForm(f => ({ ...f, seller_phone: e.target.value }))} />
               </div>
+            </div>
+            <div className="space-y-2">
+              <Label>{t("location")}</Label>
+              <MapLocationPicker 
+                onLocationSelect={(location, lat, lng) => {
+                  setForm(f => ({ ...f, location, lat, lng }));
+                }}
+                initialLocation={form.location}
+                initialLat={form.lat}
+                initialLng={form.lng}
+              />
             </div>
             <Button type="submit" className="w-full agri-btn-press">{t("save_changes")}</Button>
           </form>

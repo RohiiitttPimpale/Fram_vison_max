@@ -49,11 +49,11 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     initAuth();
   }, []);
 
-  const login = useCallback(async (email: string, password: string): Promise<boolean> => {
+  const login = useCallback(async (identifier: string, password: string): Promise<boolean> => {
     try {
       setError(null);
       setLoading(true);
-      const response = await apiClient.login(email, password);
+      const response = await apiClient.login(identifier, password);
       apiClient.setToken(response.access_token);
       setUser(response.user);
       return true;
@@ -72,11 +72,13 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       setLoading(true);
       const response = await apiClient.signup({
         email: profile.email,
+        username: profile.username,
         name: profile.name,
         password,
+        phone: profile.seller_phone,
         location: profile.location,
-        farm_size: profile.farm_size,
-        preferred_crop: profile.preferred_crop,
+        latitude: profile.latitude,
+        longitude: profile.longitude,
       });
       apiClient.setToken(response.access_token);
       setUser(response.user);
@@ -89,6 +91,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       setLoading(false);
     }
   }, []);
+
 
   const logout = useCallback(() => {
     apiClient.setToken(null);

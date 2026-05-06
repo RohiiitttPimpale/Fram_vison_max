@@ -567,16 +567,22 @@ const CropPlanner = () => {
             </div>
             <div className="mb-4 p-3 rounded-lg bg-primary/5 border border-primary/20">
               <p className="text-sm text-primary font-medium">💡 {t("planner_suggested_date")}</p>
+              <p className="text-xs text-muted-foreground mt-1">Select the plantation (sowing/transplanting) date. Land preparation will be scheduled before this date automatically.</p>
             </div>
             <div className="grid gap-4 sm:grid-cols-2">
               <div>
-                <label className="text-sm font-medium text-foreground mb-1.5 block">{t("planner_start_date")}</label>
-                <input
-                  type="date"
-                  value={startDate}
-                  onChange={e => setStartDate(e.target.value)}
-                  className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-                />
+                <label className="text-sm font-medium text-foreground mb-2 block">Plantation Date</label>
+                <div className="space-y-2">
+                  <input
+                    type="date"
+                    value={startDate}
+                    onChange={e => setStartDate(e.target.value)}
+                    className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                  />
+                  <p className="text-xs text-muted-foreground">
+                    {startDate && `Land prep starts: ${new Date(new Date(startDate).getTime() - 14 * 24 * 60 * 60 * 1000).toLocaleDateString()}`}
+                  </p>
+                </div>
               </div>
               <div className="flex items-end">
                 <Button onClick={handleGenerate} disabled={!startDate || schedule !== null} className="w-full">

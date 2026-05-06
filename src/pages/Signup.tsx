@@ -9,11 +9,11 @@ import { Label } from "@/components/ui/label";
 import { Sprout } from "lucide-react";
 import { toast } from "sonner";
 import LanguageSelector from "@/components/LanguageSelector";
+import { MapLocationPicker } from "@/components/ui/map-location-picker";
 
 const Signup = () => {
-  const [form, setForm] = useState({ name: "", email: "", location: "", farmSize: "" });
+  const [form, setForm] = useState({ name: "", email: "", username: "", phone: "", location: "", lat: 20.5937, lng: 78.9629 });
   const [password, setPassword] = useState("");
-  const [isLocating, setIsLocating] = useState(false);
   const { signup, error } = useAuth();
   const { t } = useLanguage();
   const navigate = useNavigate();
@@ -26,34 +26,31 @@ const Signup = () => {
         const location = await extractLocation();
         setForm((prev) => ({ ...prev, location }));
       } catch {
-        // Ignore auto-detect failures. User can still enter location manually.
+        // Ignore auto-detect failures. User can still select location on map.
       }
     };
 
     void prefillLocation();
   }, [form.location]);
 
-  const handleExtractLocation = async () => {
-    try {
-      setIsLocating(true);
-      const location = await extractLocation();
-      setForm(prev => ({ ...prev, location }));
-      toast.success("Location detected");
-    } catch (err) {
-      const message = err instanceof Error ? err.message : "Unable to detect location";
-      toast.error(message);
-    } finally {
-      setIsLocating(false);
-    }
-  };
-
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    
+    // Validate phone format (7-15 digits)
+    const phoneDigits = form.phone.replace(/[^0-9]/g, "");
+    if (phoneDigits.length < 7 || phoneDigits.length > 15) {
+      toast.error("Phone number must be 7-15 digits");
+      return;
+    }
+    
     const success = await signup({
       name: form.name,
       email: form.email,
+      username: form.username,
       location: form.location,
-      farm_size: form.farmSize,
+      latitude: form.lat,
+      longitude: form.lng,
+      seller_phone: form.phone,
     }, password);
     if (success) {
       toast.success(t("account_created"));
@@ -90,22 +87,30 @@ const Signup = () => {
               <Input type="email" value={form.email} onChange={e => setForm(f => ({ ...f, email: e.target.value }))} required />
             </div>
           </div>
+          <div className="grid grid-cols-2 gap-4">
+            <div className="space-y-2">
+              <Label>Username</Label>
+              <Input value={form.username} onChange={e => setForm(f => ({ ...f, username: e.target.value }))} required />
+            </div>
+            <div className="space-y-2">
+              <Label>Phone Number</Label>
+              <Input value={form.phone} onChange={e => setForm(f => ({ ...f, phone: e.target.value }))} placeholder="+91 9876543210" required />
+            </div>
+          </div>
           <div className="space-y-2">
             <Label>{t("password")}</Label>
             <Input type="password" value={password} onChange={e => setPassword(e.target.value)} placeholder={t("min_characters")} required minLength={6} />
           </div>
-          <div className="grid grid-cols-2 gap-4">
-            <div className="space-y-2">
-              <Label>{t("location")}</Label>
-              <Input value={form.location} onChange={e => setForm(f => ({ ...f, location: e.target.value }))} required />
-              <Button type="button" variant="outline" size="sm" onClick={handleExtractLocation} disabled={isLocating}>
-                {isLocating ? "Detecting..." : "Use current location"}
-              </Button>
-            </div>
-            <div className="space-y-2">
-              <Label>{t("farm_size")}</Label>
-              <Input value={form.farmSize} onChange={e => setForm(f => ({ ...f, farmSize: e.target.value }))} required />
-            </div>
+          <div className="space-y-2">
+            <Label>{t("location")}</Label>
+            <MapLocationPicker 
+              onLocationSelect={(location, lat, lng) => {
+                setForm(f => ({ ...f, location, lat, lng }));
+              }}
+              initialLocation={form.location}
+              initialLat={form.lat}
+              initialLng={form.lng}
+            />
           </div>
           <Button type="submit" className="w-full agri-btn-press">{t("create_account")}</Button>
         </form>

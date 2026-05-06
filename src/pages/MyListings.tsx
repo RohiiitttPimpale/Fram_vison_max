@@ -1,350 +1,241 @@
-import { useMemo, useState } from "react";
-import { CheckCircle2, ListChecks, MessageSquare, Pencil, Trash2, XCircle } from "lucide-react";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Skeleton } from "@/components/ui/skeleton";
-import { Textarea } from "@/components/ui/textarea";
-import { useLanguage } from "@/contexts/LanguageContext";
-import {
-  useDeleteMarketplaceListing,
-  useMarkListingSold,
-  useMyMarketplaceInquiries,
-  useMyMarketplaceListings,
-  useUpdateInquiryStatus,
-  useUpdateMarketplaceListing,
-  useUploadMarketplaceImage,
-} from "@/hooks/use-marketplace";
-import type { MarketplaceListing } from "@/lib/api";
+import { useEffect, useMemo, useState } from "react";
+import { BadgeIndianRupee, ImagePlus, MapPin, Package2, Store, Tractor, Wheat } from "lucide-react";
 import { toast } from "sonner";
+import { apiClient, type MarketplaceListing } from "@/lib/api";
 
 const MyListings = () => {
-  const { t } = useLanguage();
-  const myListingsQuery = useMyMarketplaceListings();
-  const inquiriesQuery = useMyMarketplaceInquiries();
-  const markSold = useMarkListingSold();
-  const deleteListing = useDeleteMarketplaceListing();
-  const updateListing = useUpdateMarketplaceListing();
-  const uploadImage = useUploadMarketplaceImage();
-  const updateInquiryStatus = useUpdateInquiryStatus();
+  const [listings, setListings] = useState<MarketplaceListing[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [title, setTitle] = useState("");
+  const [kind, setKind] = useState<"crop" | "seed">("crop");
+  const [quantity, setQuantity] = useState(1);
+  const [unit, setUnit] = useState("kg");
+  const [pricePerUnit, setPricePerUnit] = useState(1);
+  const [location, setLocation] = useState("");
+  const [description, setDescription] = useState("");
+  const [imageFile, setImageFile] = useState<File | null>(null);
 
-  const [editingListingId, setEditingListingId] = useState<number | null>(null);
-  const [editDraft, setEditDraft] = useState<Partial<MarketplaceListing>>({});
-  const [editFiles, setEditFiles] = useState<File[]>([]);
+  const stats = useMemo(() => {
+    const active = listings.filter((item) => item.status === "active").length;
+    const sold = listings.filter((item) => item.status === "sold").length;
+    return { active, sold, total: listings.length };
+  }, [listings]);
 
-  const activeListings = useMemo(
-    () => (myListingsQuery.data?.items || []).filter((item) => item.status === "active"),
-    [myListingsQuery.data?.items]
-  );
-  const soldListings = useMemo(
-    () => (myListingsQuery.data?.items || []).filter((item) => item.status === "sold"),
-    [myListingsQuery.data?.items]
-  );
-  const pendingListings = useMemo(
-    () => (myListingsQuery.data?.items || []).filter((item) => item.status === "pending"),
-    [myListingsQuery.data?.items]
-  );
-
-  const openInquiries = (inquiriesQuery.data?.as_seller || []).filter((inquiry) => inquiry.status === "open").length;
-
-  const startEdit = (listing: MarketplaceListing) => {
-    setEditingListingId(listing.id);
-    setEditFiles([]);
-    setEditDraft({
-      title: listing.title,
-      kind: listing.kind,
-      quantity: listing.quantity,
-      unit: listing.unit,
-      price_per_unit: listing.price_per_unit,
-      location: listing.location,
-      description: listing.description,
-      images: listing.images,
-    });
-  };
-
-  const cancelEdit = () => {
-    setEditingListingId(null);
-    setEditDraft({});
-    setEditFiles([]);
-  };
-
-  const handleMarkSold = async (listingId: number) => {
+  const loadListings = async () => {
     try {
-      await markSold.mutateAsync(listingId);
-      toast.success("Listing marked as sold");
+      setLoading(true);
+      const response = await apiClient.getMyMarketplaceListings();
+      setListings(response.items || []);
     } catch (err) {
-      const message = err instanceof Error ? err.message : "Failed to update listing";
-      toast.error(message);
+      toast.error(err instanceof Error ? err.message : "Failed to load your listings");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    void loadListings();
+  }, []);
+
+  const resetForm = () => {
+    setTitle("");
+    setKind("crop");
+    setQuantity(1);
+    setUnit("kg");
+    setPricePerUnit(1);
+    setLocation("");
+    setDescription("");
+    setImageFile(null);
+  };
+
+  const handleCreate = async (event: React.FormEvent) => {
+    event.preventDefault();
+
+    try {
+      let image_url: string | undefined;
+      if (imageFile) {
+        const uploaded = await apiClient.uploadMarketplaceImage(imageFile);
+        image_url = uploaded.image_url;
+      }
+
+      await apiClient.createMarketplaceListing({
+        title,
+        kind,
+        quantity,
+        unit,
+        price_per_unit: pricePerUnit,
+        location,
+        description,
+        image_url,
+      });
+
+      toast.success("Listing created");
+      resetForm();
+      void loadListings();
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Failed to create listing");
     }
   };
 
   const handleDelete = async (listingId: number) => {
     try {
-      await deleteListing.mutateAsync(listingId);
+      await apiClient.deleteMarketplaceListing(listingId);
       toast.success("Listing deleted");
-      if (editingListingId === listingId) {
-        cancelEdit();
-      }
+      void loadListings();
     } catch (err) {
-      const message = err instanceof Error ? err.message : "Failed to delete listing";
-      toast.error(message);
+      toast.error(err instanceof Error ? err.message : "Failed to delete listing");
     }
   };
 
-  const handleSaveEdit = async () => {
-    if (!editingListingId) {
-      return;
-    }
-
+  const handleMarkSold = async (listingId: number) => {
     try {
-      const uploadedUrls: string[] = [];
-      for (const file of editFiles) {
-        const result = await uploadImage.mutateAsync(file);
-        uploadedUrls.push(result.image_url);
-      }
-
-      await updateListing.mutateAsync({
-        listingId: editingListingId,
-        payload: {
-          title: String(editDraft.title || ""),
-          kind: (editDraft.kind as "crop" | "seed") || "crop",
-          quantity: Number(editDraft.quantity || 0),
-          unit: String(editDraft.unit || ""),
-          price_per_unit: Number(editDraft.price_per_unit || 0),
-          location: String(editDraft.location || ""),
-          description: String(editDraft.description || ""),
-          image_urls: uploadedUrls.length > 0 ? uploadedUrls : (editDraft.images || []).map((item) => item.image_url),
-          accepted_policy: true,
-        },
-      });
-
-      toast.success("Listing updated and sent for moderation");
-      cancelEdit();
+      await apiClient.markMarketplaceListingSold(listingId);
+      toast.success("Marked sold");
+      void loadListings();
     } catch (err) {
-      const message = err instanceof Error ? err.message : "Failed to update listing";
-      toast.error(message);
-    }
-  };
-
-  const handleInquiryStatus = async (inquiryId: number, status: "responded" | "closed") => {
-    try {
-      await updateInquiryStatus.mutateAsync({ inquiryId, status });
-      toast.success(`Inquiry marked as ${status}`);
-    } catch (err) {
-      const message = err instanceof Error ? err.message : "Failed to update inquiry";
-      toast.error(message);
+      toast.error(err instanceof Error ? err.message : "Failed to update listing");
     }
   };
 
   return (
-    <div className="space-y-6">
-      <div>
-        <h1 className="text-3xl font-bold text-foreground">{t("sell_dashboard_title")}</h1>
-        <p className="text-muted-foreground mt-1">{t("sell_dashboard_subtitle")}</p>
-      </div>
-
-      <div className="grid gap-4 md:grid-cols-4">
-        <div className="agri-card">
-          <p className="text-sm text-muted-foreground">{t("sell_active_listings")}</p>
-          <p className="text-2xl font-bold text-foreground mt-1">{activeListings.length}</p>
-        </div>
-        <div className="agri-card">
-          <p className="text-sm text-muted-foreground">{t("sell_pending_review")}</p>
-          <p className="text-2xl font-bold text-foreground mt-1">{pendingListings.length}</p>
-        </div>
-        <div className="agri-card">
-          <p className="text-sm text-muted-foreground">{t("sell_sold_listings")}</p>
-          <p className="text-2xl font-bold text-foreground mt-1">{soldListings.length}</p>
-        </div>
-        <div className="agri-card">
-          <p className="text-sm text-muted-foreground">{t("sell_open_buy_requests")}</p>
-          <p className="text-2xl font-bold text-foreground mt-1">{openInquiries}</p>
-        </div>
-      </div>
-
-      <div className="agri-card">
-        <div className="flex items-center gap-2 mb-4">
-          <ListChecks size={18} className="text-primary" />
-          <h2 className="font-semibold text-foreground">{t("sell_your_sale_posts")}</h2>
-        </div>
-
-        {myListingsQuery.isLoading && (
-          <div className="space-y-3">
-            {Array.from({ length: 4 }).map((_, index) => (
-              <Skeleton key={index} className="h-24 rounded-xl" />
-            ))}
+    <div className="mx-auto max-w-6xl space-y-6 px-2 py-2 md:px-0">
+      <section className="agri-card overflow-hidden border-primary/10 bg-gradient-to-br from-card via-card to-primary/5">
+        <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
+          <div className="max-w-2xl space-y-3">
+            <div className="inline-flex items-center gap-2 rounded-full border border-primary/15 bg-primary/5 px-3 py-1 text-xs font-semibold uppercase tracking-[0.18em] text-primary">
+              <Store size={13} /> Seller workspace
+            </div>
+            <div>
+              <h1 className="text-3xl font-bold text-foreground md:text-4xl">Manage your listings in one calm, professional view.</h1>
+              <p className="mt-2 max-w-xl text-sm text-muted-foreground md:text-base">
+                Keep your offer details tidy, add a clear photo, and mark items sold when the deal is done.
+              </p>
+            </div>
           </div>
-        )}
+          <div className="grid grid-cols-3 gap-3 lg:w-[24rem]">
+            <div className="rounded-2xl border border-border/80 bg-background/80 p-3">
+              <div className="text-xs text-muted-foreground">Active</div>
+              <div className="mt-1 text-2xl font-bold text-foreground">{stats.active}</div>
+            </div>
+            <div className="rounded-2xl border border-border/80 bg-background/80 p-3">
+              <div className="text-xs text-muted-foreground">Sold</div>
+              <div className="mt-1 text-2xl font-bold text-foreground">{stats.sold}</div>
+            </div>
+            <div className="rounded-2xl border border-border/80 bg-background/80 p-3">
+              <div className="text-xs text-muted-foreground">Total</div>
+              <div className="mt-1 text-2xl font-bold text-foreground">{stats.total}</div>
+            </div>
+          </div>
+        </div>
+      </section>
 
-        {!myListingsQuery.isLoading && (myListingsQuery.data?.items.length || 0) === 0 && (
-          <p className="text-sm text-muted-foreground">{t("sell_no_posts")}</p>
-        )}
+      <div className="grid gap-6 xl:grid-cols-[1.05fr_0.95fr]">
+        <form onSubmit={handleCreate} className="agri-card space-y-5">
+          <div>
+            <h2 className="text-xl font-semibold text-foreground">Create listing</h2>
+            <p className="mt-1 text-sm text-muted-foreground">A single clear listing is better than a cluttered one.</p>
+          </div>
 
-        <div className="space-y-3">
-          {myListingsQuery.data?.items.map((listing) => (
-            <div key={listing.id} className="rounded-xl border border-border p-3">
-              <div className="flex flex-wrap items-start justify-between gap-3">
-                <div>
-                  <p className="font-medium text-foreground">{listing.title}</p>
-                  <p className="text-xs text-muted-foreground">
-                    {listing.quantity} {listing.unit} · {listing.price_per_unit.toFixed(2)} per {listing.unit}
-                  </p>
+          <div className="grid gap-3 md:grid-cols-2">
+            <label className="space-y-2 md:col-span-2">
+              <span className="text-sm font-medium text-foreground">Title</span>
+              <input className="w-full rounded-xl border border-input bg-background px-3 py-2.5 text-sm outline-none focus:ring-2 focus:ring-ring" placeholder="Fresh wheat lot" value={title} onChange={(e) => setTitle(e.target.value)} required />
+            </label>
+            <label className="space-y-2">
+              <span className="text-sm font-medium text-foreground">Type</span>
+              <select className="w-full rounded-xl border border-input bg-background px-3 py-2.5 text-sm outline-none focus:ring-2 focus:ring-ring" value={kind} onChange={(e) => setKind(e.target.value as "crop" | "seed")}>
+                <option value="crop">Crop</option>
+                <option value="seed">Seed</option>
+              </select>
+            </label>
+            <label className="space-y-2">
+              <span className="text-sm font-medium text-foreground">Unit</span>
+              <input className="w-full rounded-xl border border-input bg-background px-3 py-2.5 text-sm outline-none focus:ring-2 focus:ring-ring" placeholder="kg" value={unit} onChange={(e) => setUnit(e.target.value)} />
+            </label>
+            <label className="space-y-2">
+              <span className="text-sm font-medium text-foreground">Quantity</span>
+              <input className="w-full rounded-xl border border-input bg-background px-3 py-2.5 text-sm outline-none focus:ring-2 focus:ring-ring" type="number" min={0.01} step="0.01" value={quantity} onChange={(e) => setQuantity(Number(e.target.value))} />
+            </label>
+            <label className="space-y-2">
+              <span className="text-sm font-medium text-foreground">Price per unit</span>
+              <input className="w-full rounded-xl border border-input bg-background px-3 py-2.5 text-sm outline-none focus:ring-2 focus:ring-ring" type="number" min={0.01} step="0.01" value={pricePerUnit} onChange={(e) => setPricePerUnit(Number(e.target.value))} />
+            </label>
+            <label className="space-y-2 md:col-span-2">
+              <span className="text-sm font-medium text-foreground">Location</span>
+              <input className="w-full rounded-xl border border-input bg-background px-3 py-2.5 text-sm outline-none focus:ring-2 focus:ring-ring" placeholder="District or market" value={location} onChange={(e) => setLocation(e.target.value)} />
+            </label>
+            <label className="space-y-2 md:col-span-2">
+              <span className="text-sm font-medium text-foreground">Description</span>
+              <textarea className="min-h-[120px] w-full rounded-xl border border-input bg-background px-3 py-2.5 text-sm outline-none focus:ring-2 focus:ring-ring" placeholder="Add quality, grade, harvest window, or any useful detail." value={description} onChange={(e) => setDescription(e.target.value)} />
+            </label>
+            <label className="space-y-2 md:col-span-2">
+              <span className="text-sm font-medium text-foreground inline-flex items-center gap-2"><ImagePlus size={14} /> Photo</span>
+              <input type="file" accept="image/*" onChange={(e) => setImageFile(e.target.files?.[0] || null)} className="block w-full text-sm text-muted-foreground file:mr-4 file:rounded-xl file:border-0 file:bg-primary file:px-4 file:py-2 file:text-sm file:font-medium file:text-primary-foreground" />
+            </label>
+          </div>
+
+          <div className="flex flex-wrap gap-2">
+            <button type="submit" className="rounded-full bg-primary px-4 py-2.5 text-sm font-medium text-primary-foreground shadow-sm transition-opacity hover:opacity-95">Create listing</button>
+            <button type="button" className="rounded-full border border-border bg-background px-4 py-2.5 text-sm font-medium text-muted-foreground hover:text-foreground" onClick={resetForm}>Reset</button>
+          </div>
+        </form>
+
+        <div className="agri-card space-y-4">
+          <div>
+            <h2 className="text-xl font-semibold text-foreground">Your listings</h2>
+            <p className="mt-1 text-sm text-muted-foreground">Simple controls for active and sold items.</p>
+          </div>
+
+          {loading && <p className="text-sm text-muted-foreground">Loading...</p>}
+          {!loading && listings.length === 0 && (
+            <div className="rounded-2xl border border-dashed border-border bg-muted/30 p-5 text-sm text-muted-foreground">
+              No listings yet. Publish your first item with the form.
+            </div>
+          )}
+
+          <div className="space-y-3">
+            {listings.map((listing) => (
+              <article key={listing.id} className="rounded-2xl border border-border bg-background p-4 shadow-sm">
+                <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+                  <div className="min-w-0 space-y-1">
+                    <div className="flex flex-wrap items-center gap-2">
+                      <h3 className="truncate text-base font-semibold text-foreground">{listing.title}</h3>
+                      <span className={`rounded-full px-2.5 py-0.5 text-xs font-medium ${listing.status === "sold" ? "bg-emerald-500/10 text-emerald-700" : "bg-primary/10 text-primary"}`}>
+                        {listing.status}
+                      </span>
+                    </div>
+                    <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-sm text-muted-foreground">
+                      <span className="inline-flex items-center gap-1"><Tractor size={14} /> {listing.quantity} {listing.unit}</span>
+                      <span className="inline-flex items-center gap-1"><MapPin size={14} /> {listing.location || "No location"}</span>
+                    </div>
+                  </div>
+
+                  <div className="rounded-2xl bg-muted px-3 py-2 text-right">
+                    <div className="flex items-center justify-end gap-1 text-xs text-muted-foreground"><BadgeIndianRupee size={12} /> Price</div>
+                    <div className="text-lg font-bold text-foreground">₹ {listing.price_per_unit.toFixed(2)}</div>
+                  </div>
                 </div>
 
-                <div className="flex items-center gap-2">
-                  <span
-                    className={`text-xs px-2 py-1 rounded-full ${
-                      listing.status === "active"
-                        ? "bg-primary/10 text-primary"
-                        : listing.status === "pending"
-                          ? "bg-amber-500/10 text-amber-700 dark:text-amber-400"
-                          : "bg-muted text-muted-foreground"
-                    }`}
-                  >
-                    {listing.status}
-                  </span>
-                  <Button size="sm" variant="outline" onClick={() => startEdit(listing)}>
-                    <Pencil size={14} className="mr-1.5" /> {t("sell_edit")}
-                  </Button>
-                  <Button size="sm" variant="outline" onClick={() => void handleDelete(listing.id)}>
-                    <Trash2 size={14} className="mr-1.5" /> {t("sell_delete")}
-                  </Button>
-                  {listing.status === "active" && (
-                    <Button size="sm" variant="outline" onClick={() => void handleMarkSold(listing.id)}>
-                      <CheckCircle2 size={14} className="mr-1.5" /> {t("sell_mark_sold")}
-                    </Button>
+                {(listing.image_url || listing.primary_image_url) && (
+                  <div className="mt-3 overflow-hidden rounded-2xl border border-border">
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                    <img src={listing.image_url || listing.primary_image_url || ""} alt={listing.title} className="h-36 w-full object-cover" />
+                  </div>
+                )}
+
+                <div className="mt-3 flex flex-wrap gap-2">
+                  {listing.status !== "sold" && (
+                    <button type="button" onClick={() => void handleMarkSold(listing.id)} className="rounded-full bg-amber-500 px-3 py-2 text-sm font-medium text-white transition-opacity hover:opacity-95">
+                      Mark sold
+                    </button>
                   )}
+                  <button type="button" onClick={() => void handleDelete(listing.id)} className="rounded-full border border-border bg-background px-3 py-2 text-sm font-medium text-muted-foreground hover:text-foreground">
+                    Delete
+                  </button>
                 </div>
-              </div>
-
-              {editingListingId === listing.id && (
-                <div className="mt-4 grid gap-3 md:grid-cols-2">
-                  <div className="space-y-2 md:col-span-2">
-                    <Label>{t("market_title_label")}</Label>
-                    <Input
-                      value={String(editDraft.title || "")}
-                      onChange={(e) => setEditDraft((prev) => ({ ...prev, title: e.target.value }))}
-                    />
-                  </div>
-
-                  <div className="space-y-2">
-                    <Label>{t("market_quantity_label")}</Label>
-                    <Input
-                      type="number"
-                      min={0.01}
-                      step="0.01"
-                      value={Number(editDraft.quantity || 0)}
-                      onChange={(e) => setEditDraft((prev) => ({ ...prev, quantity: Number(e.target.value || 0) }))}
-                    />
-                  </div>
-
-                  <div className="space-y-2">
-                    <Label>{t("market_price_per_unit_label")}</Label>
-                    <Input
-                      type="number"
-                      min={0.01}
-                      step="0.01"
-                      value={Number(editDraft.price_per_unit || 0)}
-                      onChange={(e) => setEditDraft((prev) => ({ ...prev, price_per_unit: Number(e.target.value || 0) }))}
-                    />
-                  </div>
-
-                  <div className="space-y-2">
-                    <Label>{t("market_unit_label")}</Label>
-                    <Input
-                      value={String(editDraft.unit || "")}
-                      onChange={(e) => setEditDraft((prev) => ({ ...prev, unit: e.target.value }))}
-                    />
-                  </div>
-
-                  <div className="space-y-2">
-                    <Label>{t("market_location_label")}</Label>
-                    <Input
-                      value={String(editDraft.location || "")}
-                      onChange={(e) => setEditDraft((prev) => ({ ...prev, location: e.target.value }))}
-                    />
-                  </div>
-
-                  <div className="space-y-2 md:col-span-2">
-                    <Label>{t("market_description_label")}</Label>
-                    <Textarea
-                      value={String(editDraft.description || "")}
-                      onChange={(e) => setEditDraft((prev) => ({ ...prev, description: e.target.value }))}
-                    />
-                  </div>
-
-                  <div className="space-y-2 md:col-span-2">
-                    <Label>{t("sell_replace_images")}</Label>
-                    <Input
-                      type="file"
-                      accept="image/png,image/jpeg,image/webp"
-                      multiple
-                      onChange={(e) => setEditFiles(Array.from(e.target.files || []).slice(0, 5))}
-                    />
-                    {editFiles.length > 0 && (
-                      <p className="text-xs text-muted-foreground">{t("sell_new_images_selected", { count: String(editFiles.length) })}</p>
-                    )}
-                  </div>
-
-                  <div className="md:col-span-2 flex gap-2">
-                    <Button onClick={() => void handleSaveEdit()} disabled={updateListing.isPending || uploadImage.isPending}>
-                      {t("sell_save_changes")}
-                    </Button>
-                    <Button variant="outline" onClick={cancelEdit}>
-                      {t("sell_cancel")}
-                    </Button>
-                  </div>
-                </div>
-              )}
-            </div>
-          ))}
-        </div>
-      </div>
-
-      <div className="agri-card">
-        <div className="flex items-center gap-2 mb-4">
-          <MessageSquare size={18} className="text-primary" />
-          <h2 className="font-semibold text-foreground">{t("sell_buyer_messages")}</h2>
-        </div>
-
-        {inquiriesQuery.isLoading && (
-          <div className="space-y-3">
-            {Array.from({ length: 3 }).map((_, index) => (
-              <Skeleton key={index} className="h-20 rounded-xl" />
+              </article>
             ))}
           </div>
-        )}
-
-        {!inquiriesQuery.isLoading && (inquiriesQuery.data?.as_seller.length || 0) === 0 && (
-          <p className="text-sm text-muted-foreground">{t("sell_no_buyer_messages")}</p>
-        )}
-
-        <div className="space-y-3">
-          {inquiriesQuery.data?.as_seller.map((inquiry) => (
-            <div key={inquiry.id} className="rounded-xl border border-border p-3">
-              <div className="flex items-start justify-between gap-3">
-                <div>
-                  <p className="font-medium text-foreground">{inquiry.listing_title}</p>
-                  <p className="text-xs text-muted-foreground mb-1">{t("sell_from")}: {inquiry.buyer_name || t("sell_buyer")}</p>
-                  <p className="text-sm text-foreground">{inquiry.message}</p>
-                </div>
-                <span className="text-xs px-2 py-1 rounded-full bg-muted text-muted-foreground">{inquiry.status}</span>
-              </div>
-
-              <div className="mt-3 flex gap-2">
-                {inquiry.status === "open" && (
-                  <Button size="sm" variant="outline" onClick={() => void handleInquiryStatus(inquiry.id, "responded")}>
-                    <CheckCircle2 size={14} className="mr-1.5" /> {t("sell_mark_replied")}
-                  </Button>
-                )}
-                {inquiry.status !== "closed" && (
-                  <Button size="sm" variant="outline" onClick={() => void handleInquiryStatus(inquiry.id, "closed")}>
-                    <XCircle size={14} className="mr-1.5" /> {t("sell_close_request")}
-                  </Button>
-                )}
-              </div>
-            </div>
-          ))}
         </div>
       </div>
     </div>

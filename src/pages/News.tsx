@@ -74,13 +74,11 @@ const News = () => {
   const offerItems = offersQuery.data?.pages.flatMap((page) => page.items) ?? [];
   const allOfferItems = allOffersQuery.data?.pages.flatMap((page) => page.items) ?? [];
 
-  const needsNewsFallback = newsQuery.isError || (!newsQuery.isLoading && newsItems.length === 0);
-  const needsOffersFallback = offersQuery.isError || (!offersQuery.isLoading && offerItems.length === 0);
+  const needsNewsFallback = newsQuery.isError && allNewsQuery.isError;
+  const needsOffersFallback = offersQuery.isError && allOffersQuery.isError;
   const isInitialNewsLoading = newsQuery.isLoading && newsItems.length === 0;
   const isInitialOffersLoading = offersQuery.isLoading && offerItems.length === 0;
-  const usingFallback =
-    (needsNewsFallback && (isFilteringByState || allNewsItems.length === 0)) ||
-    (needsOffersFallback && (isFilteringByState || allOfferItems.length === 0));
+  const usingFallback = needsNewsFallback || needsOffersFallback;
   const displayNews = isInitialNewsLoading
     ? []
     : newsItems.length > 0

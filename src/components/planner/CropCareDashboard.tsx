@@ -64,9 +64,6 @@ const GROWTH_PHASES = [
   { maxDay: Infinity, key: "phase_maturity" },
 ];
 
-const PHOTO_CHECK_INTERVAL_DAYS = 3;
-const PHOTO_CHECK_GRACE_DAYS = 2;
-
 const CropCareDashboard = ({
   cropId,
   cropDbId,
@@ -201,46 +198,6 @@ const CropCareDashboard = ({
   const currentPhase = useMemo(() => {
     return GROWTH_PHASES.find(p => daysSinceSowing <= p.maxDay)?.key || "phase_maturity";
   }, [daysSinceSowing]);
-
-  const photoTaskStatus = useMemo(() => {
-    const scanAgeDay = diseaseSignal?.checkedAt
-      ? Math.floor((new Date(diseaseSignal.checkedAt).getTime() - new Date(startDate).getTime()) / (1000 * 60 * 60 * 24))
-      : null;
-
-    if (daysSinceSowing < PHOTO_CHECK_INTERVAL_DAYS) {
-      return {
-        kind: "upcoming" as const,
-        dueDay: PHOTO_CHECK_INTERVAL_DAYS,
-        message: `Take your first crop photo on day ${PHOTO_CHECK_INTERVAL_DAYS}.`,
-      };
-    }
-
-    const currentCycleDay = Math.floor(daysSinceSowing / PHOTO_CHECK_INTERVAL_DAYS) * PHOTO_CHECK_INTERVAL_DAYS;
-    const cycleCovered = typeof scanAgeDay === "number" && scanAgeDay >= currentCycleDay;
-
-    if (cycleCovered) {
-      return {
-        kind: "completed" as const,
-        dueDay: currentCycleDay + PHOTO_CHECK_INTERVAL_DAYS,
-        message: `Photo task completed for this cycle. Next photo due on day ${currentCycleDay + PHOTO_CHECK_INTERVAL_DAYS}.`,
-      };
-    }
-
-    const delay = Math.max(0, daysSinceSowing - currentCycleDay);
-    if (delay > PHOTO_CHECK_GRACE_DAYS) {
-      return {
-        kind: "overdue" as const,
-        dueDay: currentCycleDay,
-        message: `Photo task overdue by ${delay - PHOTO_CHECK_GRACE_DAYS} day(s). Upload a crop image now.`,
-      };
-    }
-
-    return {
-      kind: "due" as const,
-      dueDay: currentCycleDay,
-      message: `Photo task due now (every ${PHOTO_CHECK_INTERVAL_DAYS} days). Upload a new crop image.`,
-    };
-  }, [diseaseSignal?.checkedAt, daysSinceSowing, startDate]);
 
   // Care tasks: only irrigation, fertilization, pest control, growth monitoring
   const careTasks = useMemo(() => {
@@ -673,31 +630,6 @@ const CropCareDashboard = ({
           )}
         </DialogContent>
       </Dialog>
-
-      <motion.div
-        initial={{ opacity: 0, y: -10 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ delay: 0.028 }}
-        className={`agri-card border-2 ${photoTaskStatus.kind === "overdue" ? "border-destructive/30 bg-destructive/5" : photoTaskStatus.kind === "due" ? "border-amber-500/30 bg-amber-50/40 dark:bg-amber-900/10" : "border-primary/20"}`}
-      >
-        <div className="flex items-center justify-between gap-3">
-          <div>
-            <h3 className="font-semibold text-foreground">Photo Monitoring Task</h3>
-            <p className="text-xs text-muted-foreground mt-1">{photoTaskStatus.message}</p>
-          </div>
-          <Badge variant={photoTaskStatus.kind === "overdue" ? "destructive" : "secondary"} className="whitespace-nowrap text-xs">
-            {photoTaskStatus.kind === "completed" ? "Completed" : photoTaskStatus.kind === "upcoming" ? "Upcoming" : photoTaskStatus.kind === "overdue" ? "Overdue" : "Due"}
-          </Badge>
-        </div>
-        {photoTaskStatus.kind !== "completed" && (
-          <div className="mt-3">
-            <Button size="sm" onClick={openScanDialog}>
-              <Upload size={14} className="mr-1.5" />
-              Take Photo Now
-            </Button>
-          </div>
-        )}
-      </motion.div>
 
       {/* Smart Alerts */}
       {smartAlerts.length > 0 && (
